@@ -7,158 +7,93 @@ public class DrainRecord
 	private LocalMap.DrainRecordQuery query;
 	public DrainRecord(LocalMap.DrainRecordQuery query)
 	{
-		rec = new byte[(dim + 1) * (dim + 1)];
+		rec = new byte[dim * dim];
 		this.query = query;
 	}
 	public void SetDirection(int px, int py, Dir dir)
 	{
-		if(px <= 0)
+		if(px < 0)
 		{
 			DrainRecord west = query.GetWest();
 			if(west != null)
 			{
-				if(px == 0)
-					west.SetDirectionHelper(px + dim, py, dir);
-				else
-				{
-					west.SetDirection(px + dim, py, dir);
-					return;
-				}
+				west.SetDirection(px + dim, py, dir);
 			}
-			else if(px < 0)
-				return;
-
+			return;
 		}
 		if(px >= dim)
 		{
 			DrainRecord east = query.GetEast();
 			if(east != null)
 			{
-				if(px == dim)
-					east.SetDirectionHelper(px - dim, py, dir);
-				else
-				{
-					east.SetDirection(px - dim, py, dir);
-					return;
-				}
+				east.SetDirection(px - dim, py, dir);
 			}
-			else if(px > dim)
-				return;
+			return;
 		}
-		if(py <= 0)
+		if(py < 0)
 		{
 			DrainRecord north = query.GetNorth();
 			if(north != null)
 			{
-				if(py == 0)
-					north.SetDirectionHelper(px, py + dim, dir);
-				else
-				{
-					north.SetDirection(px, py + dim, dir);
-					return;
-				}
+				north.SetDirection(px, py + dim, dir);
 			}
-			else if(py < 0)
-				return;
+			return;
 		}
 		if(py >= dim)
 		{
 			DrainRecord south = query.GetSouth();
 			if(south != null)
 			{
-				if(py == dim)
-					south.SetDirectionHelper(px, py - dim, dir);
-				else
-				{
-					south.SetDirection(px, py - dim, dir);
-				}
-			}
-			else if(py > dim)
-				return;
+				south.SetDirection(px, py - dim, dir);			}
+			return;
 		}
-		SetDirectionHelper(px, py, dir);
-	}
-	private void SetDirectionHelper(int px, int py, Dir dir)
-	{
-		byte info = rec[px * (dim + 1) + py];
+		byte info = rec[px * dim + py];
 		Status stat = UnpackDrainStatus(info);
 		byte newInfo = PackDrainInfo(dir, stat);
-		rec[px * (dim + 1) + py] = newInfo;
+		rec[px * dim + py] = newInfo;
 	}
 	public void SetStatus(int px, int py, Status stat)
 	{
-		if(px <= 0)
+		if(px < 0)
 		{
 			DrainRecord west = query.GetWest();
 			if(west != null)
 			{
-				if(px == 0)
-					west.SetStatusHelper(px + dim, py, stat);
-				else
-				{
-					west.SetStatus(px + dim, py, stat);
-					return;
-				}
+				west.SetStatus(px + dim, py, stat);
 			}
-			else if(px < 0)
-				return;
-
+			return;
 		}
 		if(px >= dim)
 		{
 			DrainRecord east = query.GetEast();
 			if(east != null)
 			{
-				if(px == dim)
-					east.SetStatusHelper(px - dim, py, stat);
-				else
-				{
-					east.SetStatus(px - dim, py, stat);
-					return;
-				}
+				east.SetStatus(px - dim, py, stat);
 			}
-			else if(px > dim)
-				return;
+			return;
 		}
-		if(py <= 0)
+		if(py < 0)
 		{
 			DrainRecord north = query.GetNorth();
 			if(north != null)
 			{
-				if(py == 0)
-					north.SetStatusHelper(px, py + dim, stat);
-				else
-				{
-					north.SetStatus(px, py + dim, stat);
-					return;
-				}
+				north.SetStatus(px, py + dim, stat);
 			}
-			else if(py < 0)
-				return;
+			return;
 		}
 		if(py >= dim)
 		{
 			DrainRecord south = query.GetSouth();
 			if(south != null)
 			{
-				if(py == dim)
-					south.SetStatusHelper(px, py - dim, stat);
-				else
-				{
-					south.SetStatus(px, py - dim, stat);
-				}
+				south.SetStatus(px, py - dim, stat);
 			}
-			else if(py > dim)
-				return;
+			return;
 		}
-		SetStatusHelper(px, py, stat);
-	}
-	private void SetStatusHelper(int px, int py, Status stat)
-	{
-		byte info = rec[px * (dim + 1) + py];
+		byte info = rec[px * dim + py];
 		Dir dir = UnpackDrainDirection(info);
 		byte newInfo = PackDrainInfo(dir, stat);
-		rec[px * (dim + 1) + py] = newInfo;
+		rec[px * dim + py] = newInfo;
 	}
 	public Dir GetDirection(int px, int py)
 	{
@@ -169,7 +104,7 @@ public class DrainRecord
 				return Dir.None;
 			return west.GetDirection(px + dim, py);
 		}
-		if(px > dim)
+		if(px >= dim)
 		{
 			DrainRecord east = query.GetEast();
 			if(east == null)
@@ -183,14 +118,14 @@ public class DrainRecord
 				return Dir.None;
 			return north.GetDirection(px, py + dim);
 		}
-		if(py > dim)
+		if(py >= dim)
 		{
 			DrainRecord south = query.GetSouth();
 			if(south == null)
 				return Dir.None;
 			return south.GetDirection(px, py - dim);
 		}
-		byte info = rec[px * (dim + 1) + py];
+		byte info = rec[px * dim + py];
 		return UnpackDrainDirection(info);
 	}
 	public Status GetStatus(int px, int py)
@@ -202,7 +137,7 @@ public class DrainRecord
 				return Status.OffMap;
 			return west.GetStatus(px + dim, py);
 		}
-		if(px > dim)
+		if(px >= dim)
 		{
 			DrainRecord east = query.GetEast();
 			if(east == null)
@@ -216,14 +151,14 @@ public class DrainRecord
 				return Status.OffMap;
 			return north.GetStatus(px, py + dim);
 		}
-		if(py > dim)
+		if(py >= dim)
 		{
 			DrainRecord south = query.GetSouth();
 			if(south == null)
 				return Status.OffMap;
 			return south.GetStatus(px, py - dim);
 		}
-		byte info = rec[px * (dim + 1) + py];
+		byte info = rec[px * dim + py];
 		return UnpackDrainStatus(info);
 	}
 
