@@ -741,8 +741,31 @@ public class LocalMap implements RenderQueue.RenderRequester
 	public void SetWatermapValue(int px, int py, WatermapValue set, boolean updateRecordWithCurrentHeight)
 	{
 		watermap.ManualPixelChange(px, py, set.toByte());
-		if(updateRecordWithCurrentHeight && waterHeightsRec != null)
-			waterHeightsRec[px * (DataImage.trueDim + 1) + py] = heightmap.Get(px, py);
+		if(updateRecordWithCurrentHeight)
+		{
+			int dim = DataImage.trueDim;
+			double val = heightmap.Get(px, py);
+			if(waterHeightsRec != null)
+				waterHeightsRec[px * (dim + 1) + py] = val;
+			if(py == 0 && GetNorth() != null && GetNorth().waterHeightsRec != null)
+				GetNorth().waterHeightsRec[px * (dim + 1) + dim] = val;
+			if(py == dim && GetSouth() != null && GetSouth().waterHeightsRec != null)
+				GetSouth().waterHeightsRec[px * (dim + 1) + 0] = val;
+			if(px == 0 && GetWest() != null && GetWest().waterHeightsRec != null)
+				GetWest().waterHeightsRec[dim * (dim + 1) + py] = val;
+			if(px == dim && GetEast() != null && GetEast().waterHeightsRec != null)
+				GetEast().waterHeightsRec[0 * (dim + 1) + py] = val;
+			
+			if(px == 0 && py == 0 && GetNorthWest() != null && GetNorthWest().waterHeightsRec != null)
+				GetNorthWest().waterHeightsRec[dim * (dim + 1) + dim] = val;
+			if(px == dim && py == 0 && GetNorthEast() != null && GetNorthEast().waterHeightsRec != null)
+				GetNorthEast().waterHeightsRec[dim] = val;
+			if(px == 0 && py == dim && GetSouthWest() != null && GetSouthWest().waterHeightsRec != null)
+				GetSouthWest().waterHeightsRec[dim * (dim + 1)] = val;
+			if(px == dim && py == dim && GetSouthEast() != null && GetSouthEast().waterHeightsRec != null)
+				GetSouthEast().waterHeightsRec[0] = val;
+		}
+			
 	}
 	public WatermapValue GetWaterPresence(int px, int py)
 	{
@@ -879,6 +902,38 @@ public class LocalMap implements RenderQueue.RenderRequester
 	public int GetWorldY()
 	{
 		return parent.GetWorldY() * RegionalMap.DIMENSION + y;
+	}
+	public LocalMap GetNorthWest()
+	{
+		if(GetNorth() != null)
+			return GetNorth().GetWest();
+		if(GetWest() != null)
+			return GetWest().GetNorth();
+		return null;
+	}
+	public LocalMap GetNorthEast()
+	{
+		if(GetNorth() != null)
+			return GetNorth().GetEast();
+		if(GetWest() != null)
+			return GetEast().GetNorth();
+		return null;
+	}
+	public LocalMap GetSouthWest()
+	{
+		if(GetSouth() != null)
+			return GetSouth().GetWest();
+		if(GetWest() != null)
+			return GetWest().GetSouth();
+		return null;
+	}
+	public LocalMap GetSouthEast()
+	{
+		if(GetSouth() != null)
+			return GetSouth().GetEast();
+		if(GetWest() != null)
+			return GetEast().GetSouth();
+		return null;
 	}
 	public LocalMap GetNorth()
 	{

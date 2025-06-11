@@ -48,69 +48,6 @@ public class LocalTerrainAlgorithms
 		return pixelsToProcess;
 	}
 	
-	private static void BFSPixelHeightCorrection(LocalMap.Pixel seed)
-	{
-		ArrayList<LocalMap.Pixel> found = new ArrayList<LocalMap.Pixel>();
-		LinkedList<LocalMap.Pixel> frontier = new LinkedList<LocalMap.Pixel>();
-		frontier.addLast(seed);
-		
-		while(!frontier.isEmpty())
-		{
-			LocalMap.Pixel current = frontier.removeFirst();
-			found.add(current);
-			double currentHeight = current.GetHeight();
-			DrainRecord.Status currentStatus = current.GetStatusInDrainRecord();
-			LocalMap.WatermapValue currentWater = current.GetWaterType();
-			for(DrainRecord.Dir dir : DrainRecord.Dir.values())
-			{
-				if(dir == DrainRecord.Dir.None)
-					continue;
-				LocalMap.Pixel adj = current.GetPixelInDir(dir);
-				if(adj == null)
-					continue;
-				if(!adj.GetParent().ActivityFlagSet())
-					continue;
-				double adjHeight = adj.GetHeight();
-				LocalMap.WatermapValue adjWater = adj.GetWaterType();
-				if(adjWater == LocalMap.WatermapValue.Ocean)
-					continue;
-				if(adjHeight > currentHeight && adjWater == LocalMap.WatermapValue.NotWater)
-					continue;
-				DrainRecord.Status adjStat = adj.GetStatusInDrainRecord();
-				if(adjStat != DrainRecord.Status.DrainsToPit && adjStat != DrainRecord.Status.Unknown)
-					continue;
-				
-				DrainRecord.Dir opp = dir.GetOpposite();
-				adj.SetDirectionInDrainRecord(opp);
-				adj.SetStatusInDrainRecord(currentStatus);
-				adj.GetParent().ManualHeightSet(adj.x, adj.y, currentHeight + Math.pow(2, -15));
-				adj.GetParent().SetWatermapValue(adj.x, adj.y, adj.GetWaterType(), true);
-				adjHeight = adj.GetHeight();
-				
-				if(currentWater == LocalMap.WatermapValue.Lake)
-				{
-					adj.GetParent().SetWatermapValue(adj.x, adj.y, LocalMap.WatermapValue.Lake, true);
-				}
-				else if(currentWater == LocalMap.WatermapValue.Ocean)
-				{
-					adj.GetParent().SetWatermapValue(adj.x, adj.y, LocalMap.WatermapValue.Ocean, true);
-				}
-				
-				frontier.addLast(adj);
-			}
-		}
-		
-		if(found.size() >= Switches.MIN_LOCAL_MAP_PIXELS_IN_LAKE && seed.GetHeight() > 0)
-		{
-			for(LocalMap.Pixel f : found)
-			{
-				if(f == seed)
-					continue;
-				
-				f.GetParent().SetWatermapValue(f.x, f.y, LocalMap.WatermapValue.Lake, true);
-			}
-		}
-	}
 	public static void SendRainDownhill(ArrayList<LocalMap> targets, boolean cleanDrainRecord)
 	{
 		GuaranteeConsistentHydrology(targets, false);
@@ -118,6 +55,8 @@ public class LocalTerrainAlgorithms
 		ArrayList<LocalMap.Pixel> allPixels = BeginPixelOperation(used, targets, false, false, false, true);
 		for(LocalMap.Pixel p : allPixels)
 		{
+			if(p.GetWaterType() == LocalMap.WatermapValue.Ocean)
+				continue;
 			boolean worked = false;
 			if(Switches.CURR_FLOW_MODEL == Switches.FLOW_MODEL.D_Infinity)
 				worked = DInfinityFlowRouting(p);
@@ -132,7 +71,7 @@ public class LocalTerrainAlgorithms
 				DrainRecord.Dir down = p.GetDirectionInDrainRecord();
 				if(down == DrainRecord.Dir.None)
 				{
-					System.out.println("WE WERE SUPPOSED TO GUARANTEE DOWNHILL");
+					System.out.println("WE WERE SUPPOSED TO GUARANTEE DOWNHILL " + p.GetStatusInDrainRecord() + " " + p.GetWaterType());
 					continue;
 				}
 				LocalMap.Pixel towards = p.GetPixelInDir(down);
@@ -623,4 +562,67 @@ public class LocalTerrainAlgorithms
 			map.getKey().CompleteEditing(true, true, false, !map.getValue());
 		}
     }
+	private static void BFSPixelHeightCorrection(LocalMap.Pixel seed)
+	{
+		ArrayList<LocalMap.Pixel> found = new ArrayList<LocalMap.Pixel>();
+		LinkedList<LocalMap.Pixel> frontier = new LinkedList<LocalMap.Pixel>();
+		frontier.addLast(seed);
+		
+		while(!frontier.isEmpty())
+		{
+			LocalMap.Pixel current = frontier.removeFirst();
+			found.add(current);
+			double currentHeight = current.GetHeight();
+			DrainRecord.Status currentStatus = current.GetStatusInDrainRecord();
+			LocalMap.WatermapValue currentWater = current.GetWaterType();
+			for(DrainRecord.Dir dir : DrainRecord.Dir.values())
+			{
+				if(dir == DrainRecord.Dir.None)
+					continue;
+				LocalMap.Pixel adj = current.GetPixelInDir(dir);
+				if(adj == null)
+					continue;
+				if(!adj.GetParent().ActivityFlagSet())
+					continue;
+				double adjHeight = adj.GetHeight();
+				LocalMap.WatermapValue adjWater = adj.GetWaterType();
+				if(adjWater == LocalMap.WatermapValue.Ocean)
+					continue;
+				if(adjHeight > currentHeight && adjWater == LocalMap.WatermapValue.NotWater)
+					continue;
+				DrainRecord.Status adjStat = adj.GetStatusInDrainRecord();
+				if(adjStat != DrainRecord.Status.DrainsToPit && adjStat != DrainRecord.Status.Unknown)
+					continue;
+				
+				DrainRecord.Dir opp = dir.GetOpposite();
+				adj.SetDirectionInDrainRecord(opp);
+				adj.SetStatusInDrainRecord(currentStatus);
+				adj.GetParent().ManualHeightSet(adj.x, adj.y, currentHeight + Math.pow(2, -15));
+				adj.GetParent().SetWatermapValue(adj.x, adj.y, adj.GetWaterType(), true);
+				adjHeight = adj.GetHeight();
+				
+				if(currentWater == LocalMap.WatermapValue.Lake)
+				{
+					adj.GetParent().SetWatermapValue(adj.x, adj.y, LocalMap.WatermapValue.Lake, true);
+				}
+				else if(currentWater == LocalMap.WatermapValue.Ocean)
+				{
+					adj.GetParent().SetWatermapValue(adj.x, adj.y, LocalMap.WatermapValue.Ocean, true);
+				}
+				
+				frontier.addLast(adj);
+			}
+		}
+		
+		if(found.size() >= Switches.MIN_LOCAL_MAP_PIXELS_IN_LAKE && seed.GetHeight() > 0)
+		{
+			for(LocalMap.Pixel f : found)
+			{
+				if(f == seed)
+					continue;
+				
+				f.GetParent().SetWatermapValue(f.x, f.y, LocalMap.WatermapValue.Lake, true);
+			}
+		}
+	}
 }
