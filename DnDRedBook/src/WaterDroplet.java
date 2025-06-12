@@ -251,7 +251,7 @@ public class WaterDroplet
 				return false;
 			py -= dimension;
 		}
-		hmap.ManualHeightChange(px, py, amount);
+		hmap.ManualHeightChange(px, py, amount, true, true);
 		return true;
 	}
 	private double ErodeSediment(double lX, double lY, double amount, double cellRad)

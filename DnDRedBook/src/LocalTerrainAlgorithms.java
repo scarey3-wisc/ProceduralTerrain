@@ -597,7 +597,10 @@ public class LocalTerrainAlgorithms
 				DrainRecord.Dir opp = dir.GetOpposite();
 				adj.SetDirectionInDrainRecord(opp);
 				adj.SetStatusInDrainRecord(currentStatus);
-				adj.GetParent().ManualHeightSet(adj.x, adj.y, currentHeight + Math.pow(2, -15));
+				double targetHeight = currentHeight + Math.pow(2, -15);
+				double adjCur = adj.GetParent().GetHeight(adj.x, adj.y);
+				double delta = targetHeight - adjCur;
+				adj.GetParent().ManualHeightChange(adj.x, adj.y, delta, false, true);
 				adj.GetParent().SetWatermapValue(adj.x, adj.y, adj.GetWaterType(), true);
 				adjHeight = adj.GetHeight();
 				

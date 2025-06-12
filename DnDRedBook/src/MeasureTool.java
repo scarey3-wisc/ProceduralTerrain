@@ -89,8 +89,8 @@ public class MeasureTool extends WorldMapTool
 					return;
 				LocalMap.Coordinate local = region.GetRegionalMap().GetLocalMapAt(region.x, region.y);
 				LocalMap lm = local.GetLocalMap();
-				System.out.println("5 Laplacians");
-				lm.LaplacianErosionIteration(5);
+				System.out.println("50 Laplacians");
+				lm.LaplacianErosionIteration(50);
 				ArrayList<LocalMap> targets = new ArrayList<LocalMap>();
 				targets.add(lm);
 				System.out.println("Rain 1");

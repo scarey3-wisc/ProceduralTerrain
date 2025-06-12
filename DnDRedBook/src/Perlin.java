@@ -374,7 +374,7 @@ public class Perlin
 			wr.write(Long.toString(terra_incognita.seed));
 			wr.newLine();
 			
-			wr.write(Long.toString(hardness.seed));
+			wr.write(Long.toString(sedimentDepth.seed));
 			wr.newLine();
 			
 			wr.write(Long.toString(rockyJitters.seed));
@@ -429,7 +429,7 @@ public class Perlin
 		terra_incognita.seed = std.nextLong();
 		std.nextLine();
 		
-		hardness.seed = std.nextLong();
+		sedimentDepth.seed = std.nextLong();
 		std.nextLine();
 		
 		rockyJitters.seed = std.nextLong();
@@ -471,7 +471,7 @@ public class Perlin
 	
 	//Adjusts Tectonic Uplift Values
 	public static PerlinFunction upliftAdjust = new PerlinFunction(4.5, 0, 10, 2, 0, false);
-	
+		
 	//Pushes Terrain around a bit to destroy crisp lines
 	public static PerlinFunction blurX = new PerlinFunction(100, 0, 4, 2, 0, false);
 	public static PerlinFunction blurY = new PerlinFunction(100, 0, 4, 2, 0, false);
@@ -480,7 +480,7 @@ public class Perlin
 	public static PerlinFunction terra_incognita = new PerlinFunction(0.1, 0, 3, 2);
 	
 	//During erosion simulation, determines how easily the ground erodes
-	public static PerlinFunction hardness = new PerlinFunction(440, 0, 4, 2, 0.025, true);
+	public static PerlinFunction sedimentDepth = new PerlinFunction(193, 0, 4, 2, 0, false);
 	
 	//some functions to push the terrain a bit more
 	public static PerlinFunction rockyJitters = new PerlinFunction(350, 0, 4, 2, 0, false);	

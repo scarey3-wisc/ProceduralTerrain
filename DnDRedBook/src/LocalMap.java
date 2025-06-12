@@ -29,6 +29,7 @@ public class LocalMap implements RenderQueue.RenderRequester
 	private final DataImage32Decimal heightmap;
 	private final DataImageByte watermap;
 	private final DataImageInt rainflowmap;
+	private final DataImage32Decimal sedimentmap;
 	private DrainRecord drainRecord;
 
 	private double[] waterHeightsRec;
@@ -63,7 +64,7 @@ public class LocalMap implements RenderQueue.RenderRequester
 		heightmap = new DataImage32Decimal(p.GetDirectory(),RegionalMap.K_HEIGHTMAP_FOLDER_NAME, name, fullName, new HeightQuery(), RedBook.heightmaps);
 		watermap = new DataImageByte(p.GetDirectory(), RegionalMap.K_WATERMAP_FOLDER_NAME, name, fullName, new WaterQuery(), RedBook.watermaps);
 		rainflowmap = new DataImageInt(p.GetDirectory(), RegionalMap.K_RAINFLOWMAP_FOLDER_NAME, name, fullName, new RainflowQuery(), RedBook.rainflowmaps);
-
+		sedimentmap = new DataImage32Decimal(p.GetDirectory(), RegionalMap.K_SEDIMENTMAP_FOLDER_NAME, name, fullName, new SedimentPerlinQuery(), RedBook.sedimentmaps);
 	}
 	public void RunFullRender(int dimension, String name) {
 		ImageRender t = new ImageRender(dimension, dimension, BufferedImage.TYPE_INT_RGB);
@@ -400,7 +401,7 @@ public class LocalMap implements RenderQueue.RenderRequester
 		if(vp.IsOcean())
 			return CalculateOceanPixel(wX, wY);
 		
-		double perlinPush = Perlin.rockyJitters.Get(wX / RegionalMap.DIMENSION, wY / RegionalMap.DIMENSION);
+		double perlinPush = Perlin.sedimentDepth.Get(wX / RegionalMap.DIMENSION, wY / RegionalMap.DIMENSION);
 		perlinPush *= 2;
 		if(perlinPush > 0)
 		{
@@ -629,20 +630,27 @@ public class LocalMap implements RenderQueue.RenderRequester
 				if(val == WatermapValue.Unknown || val == WatermapValue.NotWater)
 					continue;
 				else
-					heightmap.Set(i, j, waterHeightsRec[i * (dim + 1) + j]);
+				{
+					double curr = heightmap.Get(i, j);
+					double target = waterHeightsRec[i * (dim + 1) + j];
+					double delta = target - curr;
+					ManualHeightChange(i, j, delta, false, false);
+				}
 			}
 		}
 		if(resetRecord)
 			waterHeightsRec = null;
 	}
 	
-	//Returns true if, based on the WAterHeightsRecord, it seems like we were already editing
+	//Returns true if, based on the WaterHeightsRecord, it seems like we were already editing
 	public boolean PrepareForEditing(boolean height, boolean water, boolean rainflow)
 	{
 		if(height)
 		{
 			heightmap.RemoveFromManagement();
 			heightmap.ForceEditReady(false);
+			sedimentmap.RemoveFromManagement();
+			sedimentmap.ForceEditReady(false);
 		}
 		if(water)
 		{
@@ -667,6 +675,8 @@ public class LocalMap implements RenderQueue.RenderRequester
 		{
 			heightmap.SaveAllResolutions(false);
 			heightmap.GiveToManagement(RedBook.heightmaps);
+			sedimentmap.SaveAllResolutions(false);
+			sedimentmap.GiveToManagement(RedBook.sedimentmaps);
 		}
 		if(water)
 		{
@@ -684,8 +694,8 @@ public class LocalMap implements RenderQueue.RenderRequester
 		boolean alreadyEditing = PrepareForEditing(true, false, false);
 		for(int n = 0; n < num; n++)
 		{
-			double erosionFactor = .05;
 			heightmap.InitializePhasedDelta();
+			sedimentmap.InitializePhasedDelta();
 			for(int i = 0; i <= DataImage.trueDim; i++)
 			{
 				for(int j = 0; j <= DataImage.trueDim; j++)
@@ -700,10 +710,36 @@ public class LocalMap implements RenderQueue.RenderRequester
 					double lap = GetHeightLaplacian(x, y);
 					double mpp = 1.0 * METER_DIM / DataImage.trueDim; //meters per pixel
 					
-					double delta = erosionFactor * lap * mpp * mpp;
-					heightmap.PrepareDelta(i, j, delta);
+					//accumulate sediment
+					if(lap > 0)
+					{
+						double delta = Switches.LAPLACE_EROSION_SEDIMENT_CONSTANT * lap * mpp * mpp;
+						heightmap.PrepareDelta(i, j, delta);
+						sedimentmap.PrepareDelta(i, j, delta);
+					}
+					else if(lap < 0)
+					{
+						double sedMaxDelta = Switches.LAPLACE_EROSION_SEDIMENT_CONSTANT * lap * mpp * mpp;
+						double currentSediment = sedimentmap.Get(i, j);
+						if(currentSediment > sedMaxDelta * -1)
+						{
+							heightmap.PrepareDelta(i, j, sedMaxDelta);
+							sedimentmap.PrepareDelta(i, j, sedMaxDelta);
+						}
+						else
+						{
+							double percent = -1 * currentSediment / sedMaxDelta;
+							double sedimentDelta = currentSediment * -1;
+							double bedrockPercent = 1 - percent;
+							double bedrockMaxDelta = Switches.LAPLACE_EROSION_ROCK_CONSTANT * lap * mpp * mpp;
+							double bedrockDelta = bedrockPercent * bedrockMaxDelta;
+							heightmap.PrepareDelta(i, j, sedimentDelta + bedrockDelta);
+							sedimentmap.PrepareDelta(i, j, sedimentDelta);
+						}
+					}
 				}
 			}
+			sedimentmap.FlushDelta();
 			heightmap.FlushDelta();
 		}
 		CompleteEditing(true,false,false, !alreadyEditing);
@@ -729,14 +765,20 @@ public class LocalMap implements RenderQueue.RenderRequester
 			usedMap.getKey().CompleteEditing(true, false, false, !usedMap.getValue());
 		}
 	}
-	
-	public void ManualHeightSet(int px, int py, double value)
-	{
-		heightmap.Set(px, py, value);
-	}
-	public void ManualHeightChange(int px, int py, double amount)
+	public void ManualHeightChange(int px, int py, double amount, boolean removeFromSediment, boolean addToSediment)
 	{
 		heightmap.ManualPixelChange(px, py, amount);
+		if(addToSediment && amount > 0)
+			sedimentmap.ManualPixelChange(px, py, amount);
+		if(removeFromSediment && amount < 0)
+		{
+			double currSedDepth = sedimentmap.Get(px, py);
+			//we can't have negative sediment
+			if(currSedDepth > amount * -1)
+				sedimentmap.ManualPixelChange(px, py, amount);
+			else
+				sedimentmap.ManualPixelChange(px, py, currSedDepth * -1);
+		}
 	}
 	public void SetWatermapValue(int px, int py, WatermapValue set, boolean updateRecordWithCurrentHeight)
 	{
@@ -1197,6 +1239,54 @@ public class LocalMap implements RenderQueue.RenderRequester
 			if(next == null)
 				return null;
 			return next.drainRecord;
+		}
+    }
+    private class SedimentPerlinQuery implements DataImage32Decimal.DataProvider
+    {
+
+		@Override
+		public double GetData(double x, double y) {
+			double wX = x + GetWorldX();
+			double wY = y + GetWorldY();
+			double depth = parent.CalculateBaseSedimentDepth(wX, wY);
+			return depth;
+		}
+    	
+
+		@Override
+		public DataImage32Decimal GetNorth() 
+		{
+			LocalMap next = LocalMap.this.GetNorth();
+			if(next == null)
+				return null;
+			return next.sedimentmap;
+		}
+
+		@Override
+		public DataImage32Decimal GetSouth()
+		{
+			LocalMap next = LocalMap.this.GetSouth();
+			if(next == null)
+				return null;
+			return next.sedimentmap;
+		}
+
+		@Override
+		public DataImage32Decimal GetWest()
+		{
+			LocalMap next = LocalMap.this.GetWest();
+			if(next == null)
+				return null;
+			return next.sedimentmap;
+		}
+
+		@Override
+		public DataImage32Decimal GetEast()
+		{
+			LocalMap next = LocalMap.this.GetEast();
+			if(next == null)
+				return null;
+			return next.sedimentmap;
 		}
     }
     private class RainflowQuery implements DataImageInt.DataProvider

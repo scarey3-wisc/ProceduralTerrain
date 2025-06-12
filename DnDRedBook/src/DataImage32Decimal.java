@@ -260,12 +260,6 @@ public class DataImage32Decimal extends DataImage<int[], DataImage32Decimal>
 		}
 		return true;
 	}
-	public void Set(int px, int py, double val)
-	{
-		double current = Get(px, py);
-		double delta = val - current;
-		ManualPixelChange(px, py, delta);
-	}
 	public double Get(int px, int py)
 	{
 		int res = GetCurrentResolution();

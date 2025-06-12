@@ -841,6 +841,8 @@ public class RegionalMap
 			return false;
 		if(!EnsureDirectoryStructureForDataImages(K_RAINFLOWMAP_FOLDER_NAME))
 			return false;
+		if(!EnsureDirectoryStructureForDataImages(K_SEDIMENTMAP_FOLDER_NAME))
+			return false;
 		
 		return true;
 	}
@@ -1166,7 +1168,7 @@ public class RegionalMap
 			}
 		}
 		HashMap<LocalMap, Boolean> used = PrepareForExtensiveEditing();
-		for(int n = 0; n < 5; n++)
+		for(int n = 0; n < 50; n++)
 		{
 			System.out.println("********");
 			System.out.println("LAPLACE IT " + n);
@@ -1272,7 +1274,7 @@ public class RegionalMap
 	}
 	public void RunFullLaplacianErosion()
 	{
-		int numIterations = 40;
+		int numIterations = 50;
 		
 		HashMap<LocalMap, Boolean> used = PrepareForExtensiveEditing();
 		
@@ -1403,57 +1405,44 @@ public class RegionalMap
 			return LocalMap.WatermapValue.Ocean;
 		else
 			return LocalMap.WatermapValue.Unknown;
+	}
+	public double CalculateBaseSedimentDepth(double wX, double wY)
+	{
+		double xub = wX / RegionalMap.DIMENSION;
+		double yub = wY / RegionalMap.DIMENSION;
+		double xb = xub;
+		double yb = yub;
+		if(Switches.USE_BLURRING)
+		{
+			double blurredX = Perlin.blurX.Get(xub, yub);
+			double blurredY = Perlin.blurY.Get(xub, yub);
+			xb += Perlin.BLUR_DISTANCE * blurredX / (RegionalMap.DIMENSION * LocalMap.METER_DIM);
+			yb += Perlin.BLUR_DISTANCE * blurredY / (RegionalMap.DIMENSION * LocalMap.METER_DIM);
+		}
 		
-		/*double elev = 0;
+		SamplePoint vp = GetNearest(xb, yb);
+		if(vp == null)
+			return 0;
+		
+		double sedDep = Perlin.sedimentDepth.Get(xub, yub);
+		sedDep = Math.abs(sedDep);
+		if(sedDep < 0.1)
+			sedDep = 0;
+		sedDep *= 30;
+		
+		SamplePoint[] triangle = VoronoiAlgorithms.FindContainingSampleTriangle(xb, yb, vp);
+		if(triangle == null)
+		{
+			return vp.GetBaseSedimentDepth() + sedDep;
+		}
+		
 		double[] lerp = VoronoiAlgorithms.BarycentricCoordinates(xb, yb, triangle);
-		//double[] perlinContribs = new double[Perlin.elevDeltas.length];
+		double lerpedVal = 0;
 		for(int i = 0; i < triangle.length; i++)
 		{
-			double elevCont = triangle[i].GetElevation();
-			//double[] deltaContribs = triangle[i].GetPerlinElevDiffs();
-			if(elevCont == Double.MAX_VALUE)
-				elevCont = 0;
-			elev += elevCont * lerp[i];
-			//for(int j = 0; j < perlinContribs.length; j++)
-			//	perlinContribs[j] += lerp[i] * deltaContribs[j];
-		}*/
-		
-		/*SamplePoint vp = parent.GetNearest(xb, yb); //wX / RegionalMap.DIMENSION, wY / RegionalMap.DIMENSION);
-		SamplePoint[] tri = VoronoiAlgorithms.FindContainingSampleTriangle(xb, yb, vp); //wX / RegionalMap.DIMENSION, wY / RegionalMap.DIMENSION, vp);
-		Vec2 grad = parent.GetElevationGradient(wX, wY);
-		double elev = parent.GetElevation(wX, wY);
-		
-		if(elev == 0 && vp.IsOcean())
-			return WatermapValue.Ocean.toByte();
-
-		if(parent.IsWaterPoint(wX, wY, true, false))
-			return WatermapValue.Ocean.toByte();
-		if(parent.IsWaterPoint(wX, wY, true, true))
-		{
-			return WatermapValue.InlandLake.toByte();
+			lerpedVal += triangle[i].GetBaseSedimentDepth() * lerp[i];
 		}
-		else if(grad.Len() < 0.000001)
-		{
-			if(vp.type.IsTerraIncognita())
-				return WatermapValue.Unknown.toByte();
-			boolean possibleLake = false;
-			boolean possibleOcean = false;
-			if(tri != null)
-				for(SamplePoint sp: tri)
-				{
-					if(sp.IsInlandLake())
-						possibleLake = true;
-					if(sp.IsOcean())
-						possibleOcean = true;
-				}
-			if(possibleOcean)
-				return WatermapValue.Ocean.toByte();
-			else if(possibleLake)
-				return WatermapValue.InlandLake.toByte();
-			else
-				return WatermapValue.Unknown.toByte();
-		}
-		return WatermapValue.NotWater.toByte();*/
+		return lerpedVal + sedDep;
 	}
 	public double CalculateElevation(double wX, double wY)
 	{
@@ -2001,4 +1990,6 @@ public class RegionalMap
 	public static final String K_HEIGHTMAP_FOLDER_NAME = "Local_Heights_";
 	public static final String K_WATERMAP_FOLDER_NAME = "Local_Watermaps_";
 	public static final String K_RAINFLOWMAP_FOLDER_NAME = "Local_Rainflowmaps_";
+	public static final String K_SEDIMENTMAP_FOLDER_NAME = "Local_Sedimentmaps_";
+
 }

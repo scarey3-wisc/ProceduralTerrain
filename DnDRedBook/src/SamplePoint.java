@@ -503,6 +503,19 @@ public class SamplePoint extends MeshPoint
 	{
 		return 2;
 	}
+	
+	public double GetBaseSedimentDepth()
+	{
+		if(type.IsTerrainOfType(TerrainTemplate.PEAKS))
+			return 0;
+		else if(type.IsTerrainOfType(TerrainTemplate.MOUNTAINS))
+			return 0.3;
+		else if(type.IsTerrainOfType(TerrainTemplate.ROUGH))
+			return 2;
+		else
+			return 30;
+	}
+	
 	@Override
 	public double[] GetPerlinElevDiffs()
 	{

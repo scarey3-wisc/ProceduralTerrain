@@ -1,5 +1,8 @@
 public class Switches
 {
+	public static double LAPLACE_EROSION_ROCK_CONSTANT = 0.005;
+	public static double LAPLACE_EROSION_SEDIMENT_CONSTANT = 0.05;
+	
 	public static boolean SIMPLE_TERRAIN_TYPE_RENDERING = true;
 	public static boolean OUTLINE_MAPS = false;
 	public static boolean POISSON_DENSE = false;

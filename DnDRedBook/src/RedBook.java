@@ -453,6 +453,7 @@ public class RedBook
 	public static DataImage32Decimal.DataImageManager heightmaps = new DataImage32Decimal.DataImageManager(new int[] {50000, 10000, 4000, 1000, 500});
 	public static DataImageByte.DataImageManager watermaps = new DataImageByte.DataImageManager(new int[] {50000, 10000, 4000, 1000, 500});
 	public static DataImageInt.DataImageManager rainflowmaps = new DataImageInt.DataImageManager(new int[] {50000, 10000, 4000, 1000, 500});
+	public static DataImage32Decimal.DataImageManager sedimentmaps = new DataImage32Decimal.DataImageManager(new int[] {50000, 10000, 4000, 1000, 500});
 
 
 }
