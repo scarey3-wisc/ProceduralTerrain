@@ -277,6 +277,7 @@ public class WaterDroplet
 					weights[i - pxS][j - pyS] = 0;
 				else
 				{
+					
 					weights[i - pxS][j - pyS] = 1.0 * cellRad - dist;
 					totalWeight += 1.0 * cellRad - dist;
 				}
@@ -289,7 +290,13 @@ public class WaterDroplet
 				
 				double weight = weights[i - pxS][j - pyS];
 				double normWeight = weight / totalWeight;
-				double erode = amount * normWeight;
+				
+				double sedDep = parent.GetSedimentDepth(i, j);
+				double weightMultiplier = 1.5;
+				if(sedDep == 0)
+					weightMultiplier = 0.5;
+				
+				double erode = amount * normWeight * weightMultiplier;
 				actuallyEroded += erode;
 				ChangeHeight(i, j, -1 * erode);
 			}

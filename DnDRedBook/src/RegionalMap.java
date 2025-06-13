@@ -1426,9 +1426,12 @@ public class RegionalMap
 		
 		double sedDep = Perlin.sedimentDepth.Get(xub, yub);
 		sedDep = Math.abs(sedDep);
-		if(sedDep < 0.1)
-			sedDep = 0;
-		sedDep *= 30;
+		//if(sedDep < 0.05)
+		//	sedDep = 0;
+		//sedDep = (sedDep - 0.05) * 30;
+		if(sedDep > 0.2)
+			return 0;
+		sedDep = (0.2 - sedDep) * 150;
 		
 		SamplePoint[] triangle = VoronoiAlgorithms.FindContainingSampleTriangle(xb, yb, vp);
 		if(triangle == null)

@@ -430,57 +430,126 @@ public class SamplePoint extends MeshPoint
 		double grade = perlinPush * max + (1 - perlinPush) * min;
 		maxGrade = grade;
 	}
+	private void SetPeaks()
+	{
+		type = new TerrainType(TerrainTemplate.PEAKS);	
+		AssignMaxGrade(.5, .940);
+	}
+	private void SetMountains()
+	{
+		type = new TerrainType(TerrainTemplate.MOUNTAINS);	
+		AssignMaxGrade(.342, .866);
+	}
+	private void SetOcean()
+	{
+		type = new TerrainType(TerrainTemplate.OCEAN);
+		SetElevation(0);
+		AssignMaxGrade(0, 0);
+	}
+	private void SetHills()
+	{
+		type = new TerrainType(TerrainTemplate.HILLS);
+		AssignMaxGrade(.174, .5);
+	}
+	private void SetLakes()
+	{
+		type = new TerrainType(TerrainTemplate.FLAT);
+		type.ApplyTerrain(TerrainTemplate.LAKE);
+		AssignMaxGrade(0, 0);
+	}
+	private void SetFlats()
+	{
+		TerrainType def = new TerrainType(TerrainTemplate.FLAT);
+		AssignMaxGrade(.017, .139);
+		type = def;
+	}
 	public void AssignVoronoiTerrainType()
 	{
 		if(!Perlin.oceans.UnderThreshold(x, y))
 		{
-			type = new TerrainType(TerrainTemplate.OCEAN);
-			SetElevation(0);
-			AssignMaxGrade(0, 0);
+			if(Perlin.peaks.UnderThreshold(x, y) && 
+					Perlin.peaks.GetPercentBeneathThreshold(x, y) > 0.1 && 
+					Perlin.oceans.GetPercentAboveThreshold(x, y) < 0.1 &&
+					Perlin.peaks.GetPercentBeneathThreshold(x, y) > 2 * Perlin.oceans.GetPercentAboveThreshold(x, y))
+			{
+				if(!Perlin.randomLakes.UnderThreshold(x, y))
+				{
+					SetOcean();
+					return;
+				}
+				if(!Perlin.randomHills.UnderThreshold(x, y))
+				{
+					SetOcean();
+					return;
+				}
+				if(Perlin.randomPasses.UnderThreshold(x, y) && Perlin.randomPasses.GetPercentBeneathThreshold(x, y) > 0.1)
+				{
+					SetHills();
+					return;
+				}
+				SetPeaks();
+				return;
+			}
+			if(Perlin.mountains.UnderThreshold(x, y) && 
+					Perlin.mountains.GetPercentBeneathThreshold(x, y) > 0.1 &&
+					Perlin.oceans.GetPercentAboveThreshold(x, y) < 0.15 &&
+					Perlin.mountains.GetPercentBeneathThreshold(x, y) > 2 * Perlin.oceans.GetPercentAboveThreshold(x, y))
+			{
+				if(!Perlin.randomLakes.UnderThreshold(x, y))
+				{
+					SetOcean();
+					return;
+				}
+				if(!Perlin.randomHills.UnderThreshold(x, y))
+				{
+					SetOcean();
+					return;
+				}
+				if(Perlin.randomPasses.UnderThreshold(x, y))
+				{
+					SetHills();
+					return;
+				}
+				SetMountains();
+				return;
+			}
+			SetOcean();
 			return;
 		}
-		if(Perlin.peaks.UnderThreshold(x, y) && Perlin.oceans.GetPercentBeneathThreshold(x, y) > 0.09)
+		if(Perlin.peaks.UnderThreshold(x, y))
 		{
 			if(!Perlin.randomPasses.UnderThreshold(x, y))
 			{
-				type = new TerrainType(TerrainTemplate.PEAKS);
-				AssignMaxGrade(.5, 1);
+				SetPeaks();
 				return;
 			}
 			else
 			{
-				type = new TerrainType(TerrainTemplate.HILLS);
-				AssignMaxGrade(.174, .5);
+				SetHills();
 				return;
 			}
 		}
-		if(Perlin.mountains.UnderThreshold(x, y) && 
-				(Perlin.oceans.GetPercentBeneathThreshold(x, y) > 0.04 || Perlin.peaks.UnderThreshold(x, y)))
+		if(Perlin.mountains.UnderThreshold(x, y))
 		{
 			if(!Perlin.randomPasses.UnderThreshold(x, y))
 			{
-				type = new TerrainType(TerrainTemplate.MOUNTAINS);	
-				AssignMaxGrade(.342, .766);
+				SetMountains();
 				return;
 			}
 			else
 			{
-				type = new TerrainType(TerrainTemplate.HILLS);
-				AssignMaxGrade(.174, .5);
+				SetHills();
 				return;
 			}
 		}
 		if(Perlin.foothills.UnderThreshold(x, y) && !Perlin.randomPasses.UnderThreshold(x, y))
 		{
-			type = new TerrainType(TerrainTemplate.HILLS);
-			AssignMaxGrade(.174, .5);
+			SetHills();
 			return;
 		}
 		if(!Perlin.randomLakes.UnderThreshold(x, y))
 		{
-			type = new TerrainType(TerrainTemplate.FLAT);
-			type.ApplyTerrain(TerrainTemplate.LAKE);
-			AssignMaxGrade(0, 0);
+			SetLakes();
 			return;
 		}
 
@@ -488,14 +557,11 @@ public class SamplePoint extends MeshPoint
 				&& Perlin.oceans.GetPercentBeneathThreshold(x, y) > 0.05
 				&& Perlin.randomLakes.GetPercentBeneathThreshold(x, y) > 0.08)
 		{
-			type = new TerrainType(TerrainTemplate.HILLS);
-			AssignMaxGrade(.174, .5);
+			SetHills();
 			return;
 		}
 		
-		TerrainType def = new TerrainType(TerrainTemplate.FLAT);
-		AssignMaxGrade(.017, .139);
-		type = def;
+		SetFlats();
 		return;
 	}
 	
@@ -507,7 +573,7 @@ public class SamplePoint extends MeshPoint
 	public double GetBaseSedimentDepth()
 	{
 		if(type.IsTerrainOfType(TerrainTemplate.PEAKS))
-			return 0;
+			return 0.1;
 		else if(type.IsTerrainOfType(TerrainTemplate.MOUNTAINS))
 			return 0.3;
 		else if(type.IsTerrainOfType(TerrainTemplate.ROUGH))

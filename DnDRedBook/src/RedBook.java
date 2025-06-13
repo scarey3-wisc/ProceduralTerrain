@@ -76,7 +76,7 @@ public class RedBook
 			VoronoiAlgorithms.ConvertCoastalLakeToOcean(vp);
 			//VoronoiAlgorithms.AssignHeights(coastal);
 			ArrayList<SamplePoint> continent = VoronoiAlgorithms.FindAllWithinBoundary(vp, TerrainTemplate.OCEAN);
-			ContinentGenAlgorithms.BlurUpliftForTectonicAlgorithm(continent, 25, 2);
+			ContinentGenAlgorithms.BlurUpliftForTectonicAlgorithm(continent, 25, 5);
 						
 			ArrayList<SamplePoint> rough = VoronoiAlgorithms.FindAllOfType(continent, TerrainTemplate.ROUGH);
 			ArrayList<SamplePoint> mountains = VoronoiAlgorithms.FindAllOfType(continent, TerrainTemplate.MOUNTAINS);

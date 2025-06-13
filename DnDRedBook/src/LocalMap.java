@@ -76,6 +76,8 @@ public class LocalMap implements RenderQueue.RenderRequester
 			watermap.DemandResolution(dimension);
 		if(RequiresRainflowMapToRender())
 			rainflowmap.DemandResolution(dimension);
+		if(RequiresSedimentMapToRender())
+			sedimentmap.DemandResolution(dimension);
 		
 		if(Switches.PARALLEL_RENDERING)
 		{
@@ -147,6 +149,7 @@ public class LocalMap implements RenderQueue.RenderRequester
 		int mounColor = (148 << 16) + (126 << 8) + (40);
 		int hillColor = (156 << 16) + (158 << 8) + (93);
 		int flatColor = (124 << 16) + (166 << 8) + (88);
+		int soilColor = (135 << 16) + (120 << 8) + (84);
 		
 		Vec2 grad = heightmap.GetGradient(lX, lY);
 		grad.Divide(METER_DIM);
@@ -182,6 +185,12 @@ public class LocalMap implements RenderQueue.RenderRequester
 			base = MathToolkit.SmoothColorLerp(flatColor, hillColor, (grad.Len() - 0.03) / (0.17 - 0.03));
 		else
 			base = flatColor;
+		
+		double sedimentDepth = sedimentmap.Get(lX, lY);
+		if(sedimentDepth > 10)
+			base = soilColor;
+		else
+			base = MathToolkit.SmoothColorLerp(base, soilColor, sedimentDepth / 10);
 		
 		if(rainflow > 500)
 		{
@@ -568,6 +577,32 @@ public class LocalMap implements RenderQueue.RenderRequester
 			return false;
 		}
 	}
+	private boolean RequiresSedimentMapToRender()
+	{
+		switch(Switches.CURR_PAINT_TYPE)
+		{
+		case CONTOUR:
+			return false;
+		case ELEVATION_CURR:
+			return false;
+		case TERRAIN_EVAL:
+			return true;
+		case ELEV_GRADIENT:
+			return false;
+		case MIN_MAX_SELECTOR_DISPLAY:
+			return false;
+		case TERRAIN:
+			return false;
+		case VORONOI_INTERPOLATED:
+			return false;
+		case VORONOI_PURE:
+			return false;
+		case VORONOI_TRIANGLES:
+			return false;
+		default:
+			return false;
+		}
+	}
 	private boolean RequiresHeightmapToRender()
 	{
 		switch(Switches.CURR_PAINT_TYPE)
@@ -713,7 +748,7 @@ public class LocalMap implements RenderQueue.RenderRequester
 					//accumulate sediment
 					if(lap > 0)
 					{
-						double delta = Switches.LAPLACE_EROSION_SEDIMENT_CONSTANT * lap * mpp * mpp;
+						double delta = Switches.LAPLACE_EROSION_DEPOSITION_CONSTANT * lap * mpp * mpp;
 						heightmap.PrepareDelta(i, j, delta);
 						sedimentmap.PrepareDelta(i, j, delta);
 					}
@@ -838,6 +873,10 @@ public class LocalMap implements RenderQueue.RenderRequester
 	public void ChangeRainflow(int px, int py, int amount)
 	{
 		rainflowmap.ManualPixelChange(px, py, amount);
+	}
+	public double GetSedimentDepth(int px, int py)
+	{
+		return sedimentmap.Get(px, py);
 	}
 	public double GetHeight(int px, int py)
 	{

@@ -458,7 +458,7 @@ public class Perlin
 	public static PerlinFunction foothills = new PerlinFunction(mountains, 0.073, true); //previously: 0.09
 	
 	//Draws blobs of hills
-	public static PerlinFunction randomHills = new PerlinFunction(2.4, 0, 7, 2, 0.21, false);
+	public static PerlinFunction randomHills = new PerlinFunction(9.4, 0, 7, 2, 0.18, false);
 	
 	//Draws random lakes; increasing the threshold decreases the size
 	public static PerlinFunction randomLakes = new PerlinFunction(1.1, 0, 7, 2, 0.46, false);
@@ -480,7 +480,7 @@ public class Perlin
 	public static PerlinFunction terra_incognita = new PerlinFunction(0.1, 0, 3, 2);
 	
 	//During erosion simulation, determines how easily the ground erodes
-	public static PerlinFunction sedimentDepth = new PerlinFunction(193, 0, 4, 2, 0, false);
+	public static PerlinFunction sedimentDepth = new PerlinFunction(123, 0, 4, 2, 0, false);
 	
 	//some functions to push the terrain a bit more
 	public static PerlinFunction rockyJitters = new PerlinFunction(350, 0, 4, 2, 0, false);	

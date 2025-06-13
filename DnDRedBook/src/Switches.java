@@ -1,6 +1,7 @@
 public class Switches
 {
 	public static double LAPLACE_EROSION_ROCK_CONSTANT = 0.005;
+	public static double LAPLACE_EROSION_DEPOSITION_CONSTANT = 0.02;
 	public static double LAPLACE_EROSION_SEDIMENT_CONSTANT = 0.05;
 	
 	public static boolean SIMPLE_TERRAIN_TYPE_RENDERING = true;
@@ -11,7 +12,7 @@ public class Switches
 	public static boolean INITIAL_EXPAND_RENDERED = false;
 	public static boolean INITIAL_EXPAND_EMPTY = true;
 	public static boolean USE_BLURRING = true;
-	public static boolean CLEAR_IMAGE_CACHES = false;
+	public static boolean CLEAR_IMAGE_CACHES = true;
 	public static boolean PARALLEL_RENDERING = true;
 	public static boolean PARALLEL_CONTINENT_GEN = true;
 	
