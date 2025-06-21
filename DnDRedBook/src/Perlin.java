@@ -377,6 +377,9 @@ public class Perlin
 			wr.write(Long.toString(sedimentDepth.seed));
 			wr.newLine();
 			
+			wr.write(Long.toString(sedimentPockets.seed));
+			wr.newLine();
+			
 			wr.write(Long.toString(rockyJitters.seed));
 			wr.newLine();
 			
@@ -432,6 +435,9 @@ public class Perlin
 		sedimentDepth.seed = std.nextLong();
 		std.nextLine();
 		
+		sedimentPockets.seed = std.nextLong();
+		std.nextLine();
+		
 		rockyJitters.seed = std.nextLong();
 		std.nextLine();
 		
@@ -480,14 +486,15 @@ public class Perlin
 	public static PerlinFunction terra_incognita = new PerlinFunction(0.1, 0, 3, 2);
 	
 	//During erosion simulation, determines how easily the ground erodes
-	public static PerlinFunction sedimentDepth = new PerlinFunction(123, 0, 4, 2, 0, false);
+	public static PerlinFunction sedimentDepth = new PerlinFunction(63, 0, 2, 2, 0, false);
+	public static PerlinFunction sedimentPockets = new PerlinFunction(66, 0, 2, 2, 0.23, true);
 	
 	//some functions to push the terrain a bit more
 	public static PerlinFunction rockyJitters = new PerlinFunction(350, 0, 4, 2, 0, false);	
 	public static double rockJitterScale = 150;
-	public static PerlinFunction mountainHeightDelta = new PerlinFunction(265, 0, 6, 2.2, 0, false);
+	public static PerlinFunction mountainHeightDelta = new PerlinFunction(215, 0, 6, 2.2, 0, false);
 	public static PerlinFunction plainsHeightDelta = new PerlinFunction(110, 0, 6, 2, 0, false);
 	public static PerlinFunction[] elevDeltas = new PerlinFunction[] {plainsHeightDelta, mountainHeightDelta};
-	public static double[] elevDeltaScales = new double[] { 40, 120 };
+	public static double[] elevDeltaScales = new double[] { 40, 90 };
 	
 }

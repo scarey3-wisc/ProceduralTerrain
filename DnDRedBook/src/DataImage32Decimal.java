@@ -123,6 +123,10 @@ public class DataImage32Decimal extends DataImage<int[], DataImage32Decimal>
 		int[] real = data.getLast();
 		double currentVal = GetVal(real, trueDim + 1, px, py);
 		double newVal = currentVal + delta;
+		/*if(newVal < 0)
+		{
+			System.out.println("This usually doesn't happen in a heightmap!");
+		}*/
 		ListIterator<int[]> it = data.listIterator(data.size());
 		int index = dimRange.length;
 		while(it.hasPrevious())
@@ -360,7 +364,10 @@ public class DataImage32Decimal extends DataImage<int[], DataImage32Decimal>
 		double valB = MathToolkit.SmoothLerp(val01, val11, tX);
 		return MathToolkit.SmoothLerp(valA, valB, tY);
 	}
-	
+	public static final double UNPACK(int val)
+	{
+		return 1.0 * val * Math.pow(2, -16);
+	}
 	private static double GetVal(int[] target, int dim, int px, int py)
 	{
 		if(px < 0 || py < 0 || px >= dim || py >= dim)
@@ -368,10 +375,14 @@ public class DataImage32Decimal extends DataImage<int[], DataImage32Decimal>
 		if(px * dim + py >= target.length)
 			return 0.;
 		int valRead = target[px * dim + py];
-		double val = 1.0 * valRead * Math.pow(2, -16);
+		double val = UNPACK(valRead);
 		return val;
 		//float val = Float.intBitsToFloat(rgb);
 		//return val;
+	}
+	public static int PACK(double val)
+	{
+		return (int) (val * Math.pow(2, 16));
 	}
 	private static void SetVal(int[] target, int dim, int px, int py, double val)
 	{
@@ -381,7 +392,7 @@ public class DataImage32Decimal extends DataImage<int[], DataImage32Decimal>
 			return;
 		//int rgb = Float.floatToRawIntBits(val);
 		//target.setRGB(px, py, rgb);
-		int valToStore = (int) (val * Math.pow(2, 16));
+		int valToStore = PACK(val);
 		target[px * dim + py] = valToStore;
 	}
 

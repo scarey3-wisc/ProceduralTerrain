@@ -89,18 +89,26 @@ public class MeasureTool extends WorldMapTool
 					return;
 				LocalMap.Coordinate local = region.GetRegionalMap().GetLocalMapAt(region.x, region.y);
 				LocalMap lm = local.GetLocalMap();
-				System.out.println("50 Laplacians");
-				lm.LaplacianErosionIteration(50);
 				ArrayList<LocalMap> targets = new ArrayList<LocalMap>();
 				targets.add(lm);
+				System.out.println("Thermal 1");
+				LocalTerrainAlgorithms.ThermalErosion(targets, true);
 				System.out.println("Rain 1");
-				lm.SendRandomRainErosion(10000);
+				lm.SendRandomRainErosion(5000);
 				System.out.println("Hydrology 1");
 				LocalTerrainAlgorithms.GuaranteeConsistentHydrology(targets, true);
+				System.out.println("Thermal 2");
+				LocalTerrainAlgorithms.ThermalErosion(targets, true);
 				System.out.println("Rain 2");
-				lm.SendRandomRainErosion(10000);
+				lm.SendRandomRainErosion(5000);
 				System.out.println("Hydrology 2");
 				LocalTerrainAlgorithms.GuaranteeConsistentHydrology(targets, true);
+				System.out.println("Thermal 3");
+				LocalTerrainAlgorithms.ThermalErosion(targets, true);
+				System.out.println("20 Laplacians");
+				lm.LaplacianErosionIteration(20);
+				System.out.println("Rain 3");
+				//lm.SendRandomRainErosion(10000);
 				System.out.println("Rainflow");
 				for(LocalMap t : targets)
 					t.SendEvenRain();
@@ -124,7 +132,7 @@ public class MeasureTool extends WorldMapTool
 			else if(keysDown.contains(KeyEvent.VK_T))
 			{
 				
-				/*RegionalMap.Coordinate region = map.GetRegionalMapAt(e.getX(), e.getY());
+				RegionalMap.Coordinate region = map.GetRegionalMapAt(e.getX(), e.getY());
 				if(region == null)
 					return;
 				LocalMap.Coordinate local = region.GetRegionalMap().GetLocalMapAt(region.x, region.y);
@@ -138,13 +146,15 @@ public class MeasureTool extends WorldMapTool
 				System.out.println("Rainflow");
 				for(LocalMap t : targets)
 					t.SendEvenRain();
-				LocalTerrainAlgorithms.SendRainDownhill(targets, true);*/
+				LocalTerrainAlgorithms.GuaranteeConsistentHydrology(targets, true);
+				LocalTerrainAlgorithms.ThermalErosion(targets, true);
+				LocalTerrainAlgorithms.SendRainDownhill(targets, true);
 				
 				
-				RegionalMap.Coordinate region = map.GetRegionalMapAt(e.getX(), e.getY());
+				/*RegionalMap.Coordinate region = map.GetRegionalMapAt(e.getX(), e.getY());
 				if(region == null)
 					return;
-				region.GetRegionalMap().RunFullPhasedErosion();
+				region.GetRegionalMap().RunFullPhasedErosion();*/
 			}
 		}
 		

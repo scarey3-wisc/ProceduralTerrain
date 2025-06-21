@@ -1,6 +1,6 @@
 public class Switches
 {
-	public static double LAPLACE_EROSION_ROCK_CONSTANT = 0.005;
+	public static double LAPLACE_EROSION_ROCK_CONSTANT = 0.001;
 	public static double LAPLACE_EROSION_DEPOSITION_CONSTANT = 0.02;
 	public static double LAPLACE_EROSION_SEDIMENT_CONSTANT = 0.05;
 	

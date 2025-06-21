@@ -31,6 +31,7 @@ public class LocalMap implements RenderQueue.RenderRequester
 	private final DataImageInt rainflowmap;
 	private final DataImage32Decimal sedimentmap;
 	private DrainRecord drainRecord;
+	private PixelStatus pixelStatus;
 
 	private double[] waterHeightsRec;
 	private boolean activityFlag;
@@ -187,10 +188,10 @@ public class LocalMap implements RenderQueue.RenderRequester
 			base = flatColor;
 		
 		double sedimentDepth = sedimentmap.Get(lX, lY);
-		if(sedimentDepth > 10)
+		if(sedimentDepth > 150)
 			base = soilColor;
 		else
-			base = MathToolkit.SmoothColorLerp(base, soilColor, sedimentDepth / 10);
+			base = MathToolkit.SmoothColorLerp(base, soilColor, sedimentDepth / 150);
 		
 		if(rainflow > 500)
 		{
@@ -911,6 +912,12 @@ public class LocalMap implements RenderQueue.RenderRequester
 			return DrainRecord.Dir.None;
 		return drainRecord.GetDirection(px, py);
 	}
+	public boolean PixelIsActive(int px, int py)
+	{
+		if(pixelStatus == null)
+			return false;
+		return pixelStatus.IsActive(px, py);
+	}
 	public void SetActivityFlag()
 	{
 		activityFlag = true;
@@ -922,6 +929,16 @@ public class LocalMap implements RenderQueue.RenderRequester
 	public boolean ActivityFlagSet()
 	{
 		return activityFlag;
+	}
+	public void InitializePixelStatus()
+	{
+		if(pixelStatus != null)
+			return;
+		pixelStatus = new PixelStatus(new PixelStatusQuery());
+	}
+	public void DestroyPixelStatus()
+	{
+		pixelStatus = null;
 	}
 	public void InitializeDrainRecord()
 	{
@@ -1079,6 +1096,10 @@ public class LocalMap implements RenderQueue.RenderRequester
     	{
     		return heightmap.GetGradient(x, y);
     	}
+    	public double GetSedimentDepth()
+    	{
+    		return sedimentmap.Get(x, y);
+    	}
     	public double GetHeight()
     	{
     		return heightmap.Get(x, y);
@@ -1216,6 +1237,30 @@ public class LocalMap implements RenderQueue.RenderRequester
     			return this;
     		}
     	}
+    	public boolean IsActive()
+    	{
+    		if(pixelStatus == null)
+    			return false;
+    		return pixelStatus.IsActive(x, y);
+    	}
+    	public boolean IsQueued()
+    	{
+    		if(pixelStatus == null)
+    			return false;
+    		return pixelStatus.IsQueued(x, y);
+    	}
+    	public void SetPixelActive(boolean active)
+    	{
+    		if(pixelStatus == null)
+    			return;
+    		pixelStatus.SetActive(x, y, active);
+    	}
+    	public void SetPixelQueued(boolean queued)
+    	{
+    		if(pixelStatus == null)
+    			return;
+    		pixelStatus.SetQueued(x, y, queued);
+    	}
     	public DrainRecord.Dir GetDirectionInDrainRecord()
     	{
     		if(drainRecord == null)
@@ -1244,6 +1289,41 @@ public class LocalMap implements RenderQueue.RenderRequester
     	{
     		return LocalMap.this;
     	}
+    }
+    public class PixelStatusQuery
+    {
+    	private PixelStatusQuery()
+    	{
+    		
+    	}
+		public PixelStatus GetNorth() 
+		{
+			LocalMap next = LocalMap.this.GetNorth();
+			if(next == null)
+				return null;
+			return next.pixelStatus;
+		}
+		public PixelStatus GetSouth()
+		{
+			LocalMap next = LocalMap.this.GetSouth();
+			if(next == null)
+				return null;
+			return next.pixelStatus;
+		}
+		public PixelStatus GetWest()
+		{
+			LocalMap next = LocalMap.this.GetWest();
+			if(next == null)
+				return null;
+			return next.pixelStatus;
+		}
+		public PixelStatus GetEast()
+		{
+			LocalMap next = LocalMap.this.GetEast();
+			if(next == null)
+				return null;
+			return next.pixelStatus;
+		}
     }
     public class DrainRecordQuery
     {

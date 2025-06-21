@@ -573,11 +573,11 @@ public class SamplePoint extends MeshPoint
 	public double GetBaseSedimentDepth()
 	{
 		if(type.IsTerrainOfType(TerrainTemplate.PEAKS))
-			return 0.1;
+			return 3;
 		else if(type.IsTerrainOfType(TerrainTemplate.MOUNTAINS))
-			return 0.3;
+			return 5;
 		else if(type.IsTerrainOfType(TerrainTemplate.ROUGH))
-			return 2;
+			return 12;
 		else
 			return 30;
 	}
