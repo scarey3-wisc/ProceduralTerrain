@@ -134,28 +134,28 @@ public class DrainRecord
 		{
 			DrainRecord west = query.GetWest();
 			if(west == null)
-				return Status.OffMap;
+				return Status.OffSelection;
 			return west.GetStatus(px + dim, py);
 		}
 		if(px >= dim)
 		{
 			DrainRecord east = query.GetEast();
 			if(east == null)
-				return Status.OffMap;
+				return Status.OffSelection;
 			return east.GetStatus(px - dim, py);
 		}
 		if(py < 0)
 		{
 			DrainRecord north = query.GetNorth();
 			if(north == null)
-				return Status.OffMap;
+				return Status.OffSelection;
 			return north.GetStatus(px, py + dim);
 		}
 		if(py >= dim)
 		{
 			DrainRecord south = query.GetSouth();
 			if(south == null)
-				return Status.OffMap;
+				return Status.OffSelection;
 			return south.GetStatus(px, py - dim);
 		}
 		byte info = rec[px * dim + py];
@@ -248,9 +248,9 @@ public class DrainRecord
 	public static enum Status
 	{
 		Unknown,
-		OffMap,
+		OffSelection,
 		DrainsToOcean,
-		DrainsOffMap,
+		DrainsOffSelection,
 		DrainsToPit;
 
 		public static Status fromByte(byte b)

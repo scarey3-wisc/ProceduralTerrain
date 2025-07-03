@@ -91,7 +91,10 @@ public class MeasureTool extends WorldMapTool
 				LocalMap lm = local.GetLocalMap();
 				ArrayList<LocalMap> targets = new ArrayList<LocalMap>();
 				targets.add(lm);
-				System.out.println("Thermal 1");
+				
+				LocalTerrainAlgorithms.ThermalFluvialErosion(targets, true, 10);
+				
+				/*System.out.println("Thermal 1");
 				LocalTerrainAlgorithms.ThermalErosion(targets, true);
 				System.out.println("Rain 1");
 				lm.SendRandomRainErosion(5000);
@@ -112,7 +115,7 @@ public class MeasureTool extends WorldMapTool
 				System.out.println("Rainflow");
 				for(LocalMap t : targets)
 					t.SendEvenRain();
-				LocalTerrainAlgorithms.SendRainDownhill(targets, true);
+				LocalTerrainAlgorithms.SendRainDownhill(targets, true);*/
 			}
 			else if(keysDown.contains(KeyEvent.VK_L))
 			{

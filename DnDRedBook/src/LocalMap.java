@@ -903,7 +903,7 @@ public class LocalMap implements RenderQueue.RenderRequester
 	public DrainRecord.Status GetDrainStatus(int px, int py)
 	{
 		if(drainRecord == null)
-			return DrainRecord.Status.OffMap;
+			return DrainRecord.Status.OffSelection;
 		return drainRecord.GetStatus(px, py);
 	}
 	public DrainRecord.Dir GetDrainDirection(int px, int py)
@@ -1117,6 +1117,53 @@ public class LocalMap implements RenderQueue.RenderRequester
     	{
     		return WatermapValue.fromByte(watermap.Get(x, y)) == WatermapValue.Ocean;
     	}
+    	public DrainRecord.Dir GetDirectionalRelationship(Pixel p)
+    	{
+    		if(p.GetParent() == GetParent())
+    		{
+        		if(p.x == x)
+        		{
+        			if(p.y == y - 1)
+        				return DrainRecord.Dir.N;
+        			if(p.y == y + 1)
+        				return DrainRecord.Dir.S;
+        		}
+        		if(p.y == y)
+        		{
+        			if(p.x == x + 1)
+        				return DrainRecord.Dir.E;
+        			if(p.x == x - 1)
+        				return DrainRecord.Dir.W;
+        		}
+    		}
+    		else
+    		{
+    			if(p.x == x)
+    			{
+    				if(p.GetParent() == GetParent().GetNorth() && p.y == y - 1 + DataImage.trueDim)
+    					return DrainRecord.Dir.N;
+    				if(p.GetParent() == GetParent().GetSouth() && p.y == y + 1 - DataImage.trueDim)
+    					return DrainRecord.Dir.S;
+    			}
+    			if(p.y == y)
+    			{
+    				if(p.GetParent() == GetParent().GetEast() && p.x == x + 1 - DataImage.trueDim)
+    					return DrainRecord.Dir.E;
+    				if(p.GetParent() == GetParent().GetWest() && p.x == x - 1 + DataImage.trueDim)
+    					return DrainRecord.Dir.W;
+    			}
+    		}
+    		/*if(p.equals(GetNorth()))
+    			return DrainRecord.Dir.N;
+    		if(p.equals(GetSouth()))
+    			return DrainRecord.Dir.S;
+    		if(p.equals(GetEast()))
+    			return DrainRecord.Dir.E;
+    		if(p.equals(GetWest()))
+    			return DrainRecord.Dir.W;*/
+    		
+    		return DrainRecord.Dir.None;
+    	}
     	public Pixel GetNorth()
     	{
     		return GetPixelInDir(DrainRecord.Dir.N);
@@ -1237,6 +1284,16 @@ public class LocalMap implements RenderQueue.RenderRequester
     			return this;
     		}
     	}
+    	public boolean equals(Pixel p)
+    	{
+    		if(p.x != x)
+    			return false;
+    		if(p.y != y)
+    			return false;
+    		if(p.GetParent() != GetParent())
+    			return false;
+    		return true;
+    	}
     	public boolean IsActive()
     	{
     		if(pixelStatus == null)
@@ -1270,7 +1327,7 @@ public class LocalMap implements RenderQueue.RenderRequester
     	public DrainRecord.Status GetStatusInDrainRecord()
     	{
     		if(drainRecord == null)
-    			return DrainRecord.Status.OffMap;
+    			return DrainRecord.Status.OffSelection;
     		return drainRecord.GetStatus(x, y);
     	}
     	public void SetDirectionInDrainRecord(DrainRecord.Dir d)

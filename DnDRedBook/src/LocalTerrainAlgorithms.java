@@ -566,12 +566,12 @@ public class LocalTerrainAlgorithms
 				continue;
 			}
 			DrainRecord.Status to = p.GetParent().GetDrainStatus(p.x + drainDir.dx(), p.y + drainDir.dy());
-			if(to == DrainRecord.Status.OffMap)
-				p.SetStatusInDrainRecord(DrainRecord.Status.DrainsOffMap);
+			if(to == DrainRecord.Status.OffSelection)
+				p.SetStatusInDrainRecord(DrainRecord.Status.DrainsOffSelection);
 			else if(to == DrainRecord.Status.DrainsToOcean)
 				p.SetStatusInDrainRecord(DrainRecord.Status.DrainsToOcean);
-			else if(to == DrainRecord.Status.DrainsOffMap)
-				p.SetStatusInDrainRecord(DrainRecord.Status.DrainsOffMap);
+			else if(to == DrainRecord.Status.DrainsOffSelection)
+				p.SetStatusInDrainRecord(DrainRecord.Status.DrainsOffSelection);
 			else
 				System.out.println("NOOO WE DON'T KNOW WHAT WE'RE DRAINING TO???");
 			
@@ -608,7 +608,7 @@ public class LocalTerrainAlgorithms
 				LocalMap.Pixel adj = current.GetPixelInDir(dir);
 				if(adj == null)
 					continue;
-				if(!adj.GetParent().ActivityFlagSet())
+				if(!adj.IsActive())
 					continue;
 				double adjHeight = adj.GetHeight();
 				LocalMap.WatermapValue adjWater = adj.GetWaterType();
@@ -667,9 +667,382 @@ public class LocalTerrainAlgorithms
 		
 		EndPixelOperation(used, true, false, false, false, cleanPixelStatus);
 	}
-	private static class ThermalErosion
+	
+	public static void ThermalFluvialErosion(ArrayList<LocalMap.Pixel> allPixels, int iterations)
+	{
+		//paper recommends 2.5 * 10^5 and 5.611 * 10^-7 for erosion on continent scale
+		//we're going to cut that down by a ton for this, given that its meant to be much more subtle
+		//ContinentGenAlgorithms.RunTectonicUpliftAlgorithm(continent, 2.5 * 100000, 5.611 * 0.0000001, 300, 0.0002);
+		
+		FluvialErosion myAlgo = new FluvialErosion(allPixels, 5 * 1000, 5.611 * 0.0000001, 2.611 * 0.00000001);
+		myAlgo.RunLoop(iterations);
+	}
+	public static void ThermalFluvialErosion(ArrayList<LocalMap> targets, boolean cleanPixelStatus, int iterations)
+	{
+		HashMap<LocalMap, Boolean> used = new HashMap<LocalMap, Boolean>();
+		ArrayList<LocalMap.Pixel> allPixels = BeginPixelOperation(used, targets, true, true, true, true, true);
+		ThermalFluvialErosion(allPixels, iterations);
+		EndPixelOperation(used, true, true, true, true, cleanPixelStatus);
+	}
+
+	private static class FluvialErosion
 	{
 		private ArrayList<LocalMap.Pixel> allPixels;
+		private double kSediment;
+		private double kRock;
+		private double dt;
+		public FluvialErosion(ArrayList<LocalMap.Pixel> allPixels, double dt, double kSediment, double kRock)
+		{
+			this.kSediment = kSediment;
+			this.kRock = kRock;
+			this.dt = dt;
+			this.allPixels = allPixels;
+		}
+		public void RunLoop(int numIterations)
+		{
+			for(int i = 0; i < numIterations; i++)
+			{
+				System.out.println("Starting Iteration: " + i);
+				OneIteration();
+				System.out.println();
+			}
+		}
+		private void OneIteration()
+		{
+			System.out.println("Sorting to start");
+			//lowest to highest;
+			allPixels.sort((a, b) -> 
+			{
+				double d = a.GetHeight() - b.GetHeight();
+				if(d < 0)
+					return -1;
+				if(d > 0)
+					return 1;
+				return 0;
+			});
+			System.out.println("Making drain decisions");
+			for(LocalMap.Pixel p : allPixels)
+				ProcessPixelDraining(p);
+			ResetAllPixelRain();
+			
+			System.out.println("Sorting for flow");
+			//highest to lowest;
+			allPixels.sort((a, b) -> 
+			{
+				double d = b.GetHeight() - a.GetHeight();
+				if(d < 0)
+					return -1;
+				if(d > 0)
+					return 1;
+				return 0;
+			});
+			System.out.println("Sending water flow");
+			for(LocalMap.Pixel p : allPixels)
+				SendFlowToDownhillPixel(p);
+			
+			System.out.println("Sorting for solver");
+			//lowest to highest;
+			allPixels.sort((a, b) -> 
+			{
+				double d = a.GetHeight() - b.GetHeight();
+				if(d < 0)
+					return -1;
+				if(d > 0)
+					return 1;
+				return 0;
+			});
+			System.out.println("Solving");
+			for(LocalMap.Pixel p : allPixels)
+				AdjustPixelElevation(p);
+		}
+		
+		private void AdjustPixelElevation(LocalMap.Pixel p)
+		{
+			if(p.GetWaterType() == LocalMap.WatermapValue.Lake)
+				return;
+			if(p.GetWaterType() == LocalMap.WatermapValue.Ocean)
+				return;
+			
+			DrainRecord.Dir drainDirection = p.GetDirectionInDrainRecord();
+			if(drainDirection == DrainRecord.Dir.None)
+				return;
+			
+			LocalMap.Pixel sink = p.GetPixelInDir(drainDirection);
+			if(sink == null)
+				return;
+			
+			double uplift = 0;
+			
+			double dist = 1.0 * LocalMap.METER_DIM / DataImage.trueDim; //meters per pixel; we're only moving 1 pixel
+			double drainageArea = dist * dist * p.GetCurrentRainflow();
+			
+			double erosionCoeff = kSediment * Math.pow(drainageArea, 0.5) / dist;
+			double denominator = 1 + erosionCoeff * dt;
+			double parenth = uplift + erosionCoeff * sink.GetHeight();
+			double numerator = p.GetHeight() + dt * parenth;
+			double result = numerator / denominator;
+			
+			double pHeight = p.GetHeight();
+			double pSediment = p.GetSedimentDepth();
+			double delta = result - pHeight;
+			
+			double secondPhaseTime = -1;
+			if(delta > 0)
+			{
+				//we actually added height? I don't think this usually happens...
+				p.GetParent().ManualHeightChange(p.x, p.y, delta, true, true);
+			}
+			else if(delta * -1 < pSediment)
+			{
+				//we can just remove this all as sediment
+				p.GetParent().ManualHeightChange(p.x, p.y, delta, true, true);
+			}
+			else if(pSediment > 0)
+			{
+				double licitResult = p.GetHeight() - pSediment;
+				double timeSpent = pSediment / (licitResult * erosionCoeff - parenth);
+				p.GetParent().ManualHeightChange(p.x, p.y, pSediment * -1, true, true);
+				double timeRemaining = dt - timeSpent;
+				if(timeRemaining < 0 || timeRemaining > dt)
+					System.out.println("AIEEEEEE");
+				else
+					secondPhaseTime = timeRemaining;
+			}
+			else
+			{
+				secondPhaseTime = dt;
+			}
+			
+			if(secondPhaseTime != -1)
+			{
+				dt = secondPhaseTime;				
+				erosionCoeff = kRock * Math.pow(drainageArea, 0.5) / dist;
+				denominator = 1 + erosionCoeff * dt;
+				parenth = uplift + erosionCoeff * sink.GetHeight();
+				numerator = p.GetHeight() + dt * parenth;
+				result = numerator / denominator;
+				delta = result - p.GetHeight();
+				p.GetParent().ManualHeightChange(p.x, p.y, delta, false, true);
+			}
+			
+			double maxGrade = 0.5; //probably we should sample this from a 3d perlin function!
+			double maxHeight = maxGrade * dist + sink.GetHeight();
+			if(p.GetHeight() > maxHeight)
+			{
+				double thermalDelta = maxHeight - p.GetHeight();
+				if(thermalDelta * -1 > p.GetSedimentDepth())
+					thermalDelta = p.GetSedimentDepth() * -1;
+				p.GetParent().ManualHeightChange(p.x, p.y, thermalDelta, false, true);
+			}
+		}
+		
+		private boolean SendFlowToDownhillPixel(LocalMap.Pixel p)
+		{
+			DrainRecord.Dir dir = p.GetDirectionInDrainRecord();
+			if(dir == DrainRecord.Dir.None)
+				return false;
+			LocalMap.Pixel adj = p.GetPixelInDir(dir);
+			if(adj == null)
+				return false;
+			if(!adj.IsActive())
+				return false;
+			if(adj.GetHeight() > p.GetHeight())
+				return false;
+			adj.GetParent().ChangeRainflow(adj.x, adj.y, p.GetCurrentRainflow());
+			return true;
+		}
+		
+		private void ProcessPixelDraining(LocalMap.Pixel p)
+		{
+			//it's already been handled, presumably by a BFS step
+			if(p.GetStatusInDrainRecord() != DrainRecord.Status.Unknown)
+				return;
+			if(p.IsOcean())
+			{
+				p.SetStatusInDrainRecord(DrainRecord.Status.DrainsToOcean);
+				return;
+			}
+			
+			boolean bfsUseful = DecideBFSUseful(p);
+			/*DrainRecord.Dir drainDir = DecideDrainDirectionD4Random(p);
+			if(drainDir != DrainRecord.Dir.None)
+			{
+				DrainRecord.Status to = p.GetParent().GetDrainStatus(p.x + drainDir.dx(), p.y + drainDir.dy());
+				if(to == DrainRecord.Status.DrainsToPit)
+					drainDir = DecideDrainDirectionD4Static(p);
+			}*/
+			DrainRecord.Dir drainDir = DecideDrainDirectionD4Static(p);
+			
+			
+			p.SetDirectionInDrainRecord(drainDir);
+			if(drainDir == DrainRecord.Dir.None)
+			{
+				p.SetStatusInDrainRecord(DrainRecord.Status.DrainsToPit);
+				return;
+			}
+			DrainRecord.Status to = p.GetParent().GetDrainStatus(p.x + drainDir.dx(), p.y + drainDir.dy());
+			if(to == DrainRecord.Status.OffSelection)
+				p.SetStatusInDrainRecord(DrainRecord.Status.DrainsOffSelection);
+			else if(to == DrainRecord.Status.DrainsToOcean)
+				p.SetStatusInDrainRecord(DrainRecord.Status.DrainsToOcean);
+			else if(to == DrainRecord.Status.DrainsOffSelection)
+				p.SetStatusInDrainRecord(DrainRecord.Status.DrainsOffSelection);
+			else
+				System.out.println("NOOO WE DON'T KNOW WHAT WE'RE DRAINING TO???");
+			
+			if(bfsUseful)
+				BFSPixelHeightCorrection(p);
+		}
+		private DrainRecord.Dir DecideDrainDirectionD4Static(LocalMap.Pixel p)
+		{
+			DrainRecord.Dir drainDir = DrainRecord.Dir.None;
+			double drainHeight = p.GetHeight();
+			for(DrainRecord.Dir dir : DrainRecord.Dir.values())
+			{
+				if(dir == DrainRecord.Dir.None)
+					continue;
+				LocalMap.Pixel adj = p.GetPixelInDir(dir);
+				if(adj == null)
+					continue;
+				double height = adj.GetHeight();
+				if(height >= drainHeight)
+					continue;
+				DrainRecord.Status to = adj.GetStatusInDrainRecord();
+				if(to == DrainRecord.Status.DrainsToPit)
+					continue;
+				if(to == DrainRecord.Status.Unknown)
+				{
+					System.out.println("NOOO WE CAN'T DRAIN TO AN UNKNOWN!");
+					continue;
+				}
+				drainDir = dir;
+				drainHeight = height;
+			}
+			return drainDir;
+		}
+		private DrainRecord.Dir DecideDrainDirectionD4Random(LocalMap.Pixel p)
+		{
+			Vec2 grad = p.GetHeightGradient();
+			if(grad.Len() == 0)
+			{
+				return DecideDrainDirectionD4Static(p);
+			}
+			grad.Normalize();
+			grad.Multiply(-1);
+			LocalMap.Pixel to1 = null;
+			double w1 = 0;
+			LocalMap.Pixel to2 = null;
+			double w2 = 0;
+					
+			if(grad.x >= 0 && grad.y >= 0)
+			{
+				//Between S and E
+				to1 = p.GetEast();
+				w1 = grad.Dot(Vec2.UnitVector(1, 0));
+				to2 = p.GetSouth();
+				w2 = grad.Dot(Vec2.UnitVector(0, 1));
+			}
+			else if(grad.x <= 0 && grad.y >= 0)
+			{
+				//between W and S
+				to1 = p.GetSouth();
+				w1 = grad.Dot(Vec2.UnitVector(0, 1));
+				to2 = p.GetWest();
+				w2 = grad.Dot(Vec2.UnitVector(-1, 0));
+			}
+			else if(grad.x <= 0 && grad.y <= 0)
+			{
+				//between W and N
+				to1 = p.GetWest();
+				w1 = grad.Dot(Vec2.UnitVector(-1, 0));
+				to2 = p.GetNorth();
+				w2 = grad.Dot(Vec2.UnitVector(0, -1));
+			}
+			else if(grad.x >= 0 && grad.y <= 0)
+			{
+				//between E and N
+				to1 = p.GetNorth();
+				w1 = grad.Dot(Vec2.UnitVector(0, -1));
+				to2 = p.GetEast();
+				w2 = grad.Dot(Vec2.UnitVector(1, 0));
+			}
+			else
+			{
+				return DecideDrainDirectionD4Static(p);
+			}
+			if(to1 == null && to2 == null)
+			{
+				return DecideDrainDirectionD4Static(p);
+			}
+			else if(to2 == null)
+			{
+				if(to1.GetHeight() >= p.GetHeight())
+					return DecideDrainDirectionD4Static(p);
+				return p.GetDirectionalRelationship(to1);
+			}
+			else if(to1 == null)
+			{
+				if(to2.GetHeight() >= p.GetHeight())
+					return DecideDrainDirectionD4Static(p);
+				return p.GetDirectionalRelationship(to2);
+			}
+			else
+			{
+				if(to1.GetHeight() >= p.GetHeight() && to2.GetHeight() >= p.GetHeight())
+					return DecideDrainDirectionD4Static(p);
+				else if(to2.GetHeight() >= p.GetHeight())
+					return p.GetDirectionalRelationship(to1);
+				else if(to1.GetHeight() >= p.GetHeight())
+					return p.GetDirectionalRelationship(to2);
+				else
+				{
+					double choice = Math.random();
+					if(choice > w1 / (w1 + w2))
+						return p.GetDirectionalRelationship(to2);
+					else
+						return p.GetDirectionalRelationship(to1);
+				}
+			}
+		}
+		private boolean DecideBFSUseful(LocalMap.Pixel p)
+		{
+			for(DrainRecord.Dir dir : DrainRecord.Dir.values())
+			{
+				if(dir == DrainRecord.Dir.None)
+					continue;
+				LocalMap.Pixel adj = p.GetPixelInDir(dir);
+				if(adj == null)
+					continue;
+				double height = adj.GetHeight();
+				if(height == p.GetHeight())
+				{
+					return true;
+				}
+				else if(height > p.GetHeight())
+				{
+					LocalMap.WatermapValue adjWat = adj.GetWaterType();
+					if(adjWat == LocalMap.WatermapValue.Lake)
+						return true;
+				}
+				else
+				{
+					DrainRecord.Status to = adj.GetStatusInDrainRecord();
+					if(to == DrainRecord.Status.DrainsToPit)
+						return true;
+				}
+			}
+			return false;
+		}
+		private void ResetAllPixelRain()
+		{
+			for(LocalMap.Pixel p : allPixels)
+			{
+				p.GetParent().ChangeRainflow(p.x, p.y, 1 - p.GetCurrentRainflow());
+			}
+		}
+	}
+	private static class ThermalErosion
+	{
 		private PixelRingQueue queue;
     	private DrainRecord.Dir[] directions;
 		private int[] senders;
@@ -720,7 +1093,6 @@ public class LocalTerrainAlgorithms
 					return 1;
 				return 0;
 			});
-			this.allPixels = allPixels;
 			queue = new PixelRingQueue(allPixels);
 			directions = new DrainRecord.Dir[] {
 	    			DrainRecord.Dir.N,
