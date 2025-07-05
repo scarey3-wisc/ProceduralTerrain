@@ -654,6 +654,22 @@ public class LocalTerrainAlgorithms
 			}
 		}
 	}
+	public static void DeleteSediment(ArrayList<LocalMap> targets, boolean cleanPixelStatus)
+	{
+		HashMap<LocalMap, Boolean> used = new HashMap<LocalMap, Boolean>();
+		ArrayList<LocalMap.Pixel> allPixels = BeginPixelOperation(used, targets, true, false, false, false, true);
+		DeleteSediment(allPixels);
+		
+		EndPixelOperation(used, true, false, false, false, cleanPixelStatus);
+	}
+	public static void DeleteSediment(ArrayList<LocalMap.Pixel> allPixels)
+	{
+		for(LocalMap.Pixel p : allPixels)
+		{
+			double sediment = p.GetSedimentDepth();
+			p.GetParent().ManualHeightChange(p.x, p.y, sediment * -1, true, true);
+		}
+	}
 	public static void ThermalErosion(ArrayList<LocalMap.Pixel> allPixels)
 	{
 		ThermalErosion myAlgo = new ThermalErosion(allPixels);
@@ -674,7 +690,7 @@ public class LocalTerrainAlgorithms
 		//we're going to cut that down by a ton for this, given that its meant to be much more subtle
 		//ContinentGenAlgorithms.RunTectonicUpliftAlgorithm(continent, 2.5 * 100000, 5.611 * 0.0000001, 300, 0.0002);
 		
-		FluvialErosion myAlgo = new FluvialErosion(allPixels, 5 * 1000, 5.611 * 0.0000001, 2.611 * 0.00000001);
+		FluvialErosion myAlgo = new FluvialErosion(allPixels, 2.5 * 100000, 5.611 * 0.00001, 5.611 * 0.00001);
 		myAlgo.RunLoop(iterations);
 	}
 	public static void ThermalFluvialErosion(ArrayList<LocalMap> targets, boolean cleanPixelStatus, int iterations)
@@ -691,6 +707,7 @@ public class LocalTerrainAlgorithms
 		private double kSediment;
 		private double kRock;
 		private double dt;
+		private boolean useThermalErosion;
 		public FluvialErosion(ArrayList<LocalMap.Pixel> allPixels, double dt, double kSediment, double kRock)
 		{
 			this.kSediment = kSediment;
@@ -832,7 +849,7 @@ public class LocalTerrainAlgorithms
 				double thermalDelta = maxHeight - p.GetHeight();
 				if(thermalDelta * -1 > p.GetSedimentDepth())
 					thermalDelta = p.GetSedimentDepth() * -1;
-				p.GetParent().ManualHeightChange(p.x, p.y, thermalDelta, false, true);
+				p.GetParent().ManualHeightChange(p.x, p.y, thermalDelta, true, true);
 			}
 		}
 		
@@ -864,14 +881,13 @@ public class LocalTerrainAlgorithms
 			}
 			
 			boolean bfsUseful = DecideBFSUseful(p);
-			/*DrainRecord.Dir drainDir = DecideDrainDirectionD4Random(p);
+			DrainRecord.Dir drainDir = DecideDrainDirectionD4Random(p);
 			if(drainDir != DrainRecord.Dir.None)
 			{
 				DrainRecord.Status to = p.GetParent().GetDrainStatus(p.x + drainDir.dx(), p.y + drainDir.dy());
 				if(to == DrainRecord.Status.DrainsToPit)
 					drainDir = DecideDrainDirectionD4Static(p);
-			}*/
-			DrainRecord.Dir drainDir = DecideDrainDirectionD4Static(p);
+			}
 			
 			
 			p.SetDirectionInDrainRecord(drainDir);
@@ -1080,7 +1096,7 @@ public class LocalTerrainAlgorithms
 		//calculated to precision gives floating point precision errors.
 		//To maintain floating point precision, we want our max delta to be a power of 2
 		//11/32 gets us really close and is good enough!
-		private int maxSedDelta = DataImage32Decimal.PACK((11./32) * (LocalMap.METER_DIM / DataImage.trueDim));
+		private int maxSedDelta = DataImage32Decimal.PACK((18./32) * (LocalMap.METER_DIM / DataImage.trueDim));
 		
 		public ThermalErosion(ArrayList<LocalMap.Pixel> allPixels)
 		{

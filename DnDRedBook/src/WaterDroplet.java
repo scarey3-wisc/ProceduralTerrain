@@ -291,10 +291,10 @@ public class WaterDroplet
 				double weight = weights[i - pxS][j - pyS];
 				double normWeight = weight / totalWeight;
 				
-				double sedDep = parent.GetSedimentDepth(i, j);
-				double weightMultiplier = 1.5;
-				if(sedDep == 0)
-					weightMultiplier = 0.5;
+				//double sedDep = parent.GetSedimentDepth(i, j);
+				double weightMultiplier = 1;
+				//if(sedDep == 0)
+				//	weightMultiplier = 0.5;
 				
 				double erode = amount * normWeight * weightMultiplier;
 				actuallyEroded += erode;

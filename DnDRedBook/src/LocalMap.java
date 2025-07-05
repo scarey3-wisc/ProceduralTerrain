@@ -188,10 +188,10 @@ public class LocalMap implements RenderQueue.RenderRequester
 			base = flatColor;
 		
 		double sedimentDepth = sedimentmap.Get(lX, lY);
-		if(sedimentDepth > 150)
+		if(sedimentDepth > 200)
 			base = soilColor;
 		else
-			base = MathToolkit.SmoothColorLerp(base, soilColor, sedimentDepth / 150);
+			base = MathToolkit.SmoothColorLerp(base, soilColor, sedimentDepth / 200);
 		
 		if(rainflow > 500)
 		{
@@ -411,7 +411,7 @@ public class LocalMap implements RenderQueue.RenderRequester
 		if(vp.IsOcean())
 			return CalculateOceanPixel(wX, wY);
 		
-		double perlinPush = Perlin.sedimentDepth.Get(wX / RegionalMap.DIMENSION, wY / RegionalMap.DIMENSION);
+		double perlinPush = Perlin.sedimentStepDelta.Get(wX / RegionalMap.DIMENSION, wY / RegionalMap.DIMENSION);
 		perlinPush *= 2;
 		if(perlinPush > 0)
 		{

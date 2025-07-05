@@ -82,6 +82,17 @@ public class MeasureTool extends WorldMapTool
 				target.add(local.GetLocalMap());
 				LocalTerrainAlgorithms.GuaranteeConsistentHydrology(target, true);
 			}
+			else if(keysDown.contains(KeyEvent.VK_E))
+			{
+				RegionalMap.Coordinate region = map.GetRegionalMapAt(e.getX(), e.getY());
+				if(region == null)
+					return;
+				LocalMap.Coordinate local = region.GetRegionalMap().GetLocalMapAt(region.x, region.y);
+				LocalMap lm = local.GetLocalMap();
+				ArrayList<LocalMap> targets = new ArrayList<LocalMap>();
+				targets.add(lm);
+				LocalTerrainAlgorithms.DeleteSediment(targets, true);
+			}
 			else if(keysDown.contains(KeyEvent.VK_C))
 			{
 				RegionalMap.Coordinate region = map.GetRegionalMapAt(e.getX(), e.getY());
@@ -92,7 +103,22 @@ public class MeasureTool extends WorldMapTool
 				ArrayList<LocalMap> targets = new ArrayList<LocalMap>();
 				targets.add(lm);
 				
-				LocalTerrainAlgorithms.ThermalFluvialErosion(targets, true, 10);
+				System.out.println("20 Laplacians");
+				lm.LaplacianErosionIteration(20);
+				System.out.println("5000 Rain Drops");
+				lm.SendRandomRainErosion(5000);
+				System.out.println("150 Thermal Fluvial");
+				LocalTerrainAlgorithms.ThermalFluvialErosion(targets, true, 150);
+				System.out.println("10000 Rain Drops");
+				lm.SendRandomRainErosion(10000);
+				/*System.out.println("Thermal Fixing");
+				LocalTerrainAlgorithms.ThermalErosion(targets, true);
+				System.out.println("Final Thermal Fluvial");
+				LocalTerrainAlgorithms.ThermalFluvialErosion(targets, true, 1);*/
+				System.out.println("10 Laplacians");
+				lm.LaplacianErosionIteration(10);
+				System.out.println("Final Hydrology");
+				LocalTerrainAlgorithms.GuaranteeConsistentHydrology(targets, true);
 				
 				/*System.out.println("Thermal 1");
 				LocalTerrainAlgorithms.ThermalErosion(targets, true);

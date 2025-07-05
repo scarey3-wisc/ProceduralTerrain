@@ -1458,6 +1458,48 @@ public class RegionalMap
 		else
 			return LocalMap.WatermapValue.Unknown;
 	}
+	
+	//this is a complicated bit of math which comes from a mathematical machine
+	//I've sketched the operation of that machine on desmos; see this link:
+	//https://www.desmos.com/calculator/f6e0udqb1c
+	//The idea is that the sediment is going to cut steps into the terrain
+	//so that when it erodes away, a tiered, staircase structure remains.
+	//So step height controls the height of those steps;
+	//but these steps aren't perfectly vertical: they are divided into a flat
+	//section and a steep section.
+	//flatLength is a number between 0-1, and controls how long the flat section is.
+	//A good number would be 0.8-0.9.
+	//flatness controls how flat that section is; a value of 0 means that this
+	//staircase structure won't exist at all, a value of 1 makes the flat section
+	//completely, 100% flat. I find a value of 0.9-0.95 reasonable.
+	//Finally, the steep section will itself be divided into substeps
+	//numSubsteps controls how many. This number must be at least 1; a higher number
+	//actually makes things smoother. 2-4 gives a series of blocky substeps.
+	private double SedimentStairCalculation(double terrainHeight, double stepHeight, double flatLength, double flatness, int numSubsteps)
+	{
+		double sedimentInStep = terrainHeight % stepHeight;
+		while(sedimentInStep < 0)
+			sedimentInStep += stepHeight;
+		
+		if(sedimentInStep <= flatLength * stepHeight)
+			return sedimentInStep * flatness;
+		
+		double substepHeight = stepHeight - flatLength * stepHeight;
+		substepHeight /= numSubsteps;
+		
+		double substep = (sedimentInStep - flatLength * stepHeight) % substepHeight;
+		while(substep < 0)
+			substep += substepHeight;
+		
+		double substepModifier = flatLength * flatness / (1 - flatLength);
+		substepModifier += 1;
+		substepModifier *= substep;
+		
+		double steepHeight = flatness * flatLength * (stepHeight - sedimentInStep);
+		steepHeight /= (1 - flatLength);
+		
+		return steepHeight + substepModifier;
+	}
 	public double CalculateBaseSedimentDepth(double wX, double wY)
 	{
 		double xub = wX / RegionalMap.DIMENSION;
@@ -1475,17 +1517,43 @@ public class RegionalMap
 		SamplePoint vp = GetNearest(xb, yb);
 		if(vp == null)
 			return 0;
-		
-		double sedDep = Perlin.sedimentDepth.Get(xub, yub);
-		sedDep = Math.abs(sedDep);
-		if(sedDep > 0.23)
-			return 0;
-		sedDep = (0.23 - sedDep) * 10;
-		if(Perlin.sedimentPockets.UnderThreshold(xub, yub))
+
+		double elev = 0;
+		MeshPoint[] meshTriangle = VoronoiAlgorithms.FindContainingTriangle(xb, yb, vp);
+		if(meshTriangle == null)
+			elev = vp.GetElevation();
+		else
 		{
-			sedDep *= 50 * (0.23 - Math.abs(Perlin.sedimentPockets.Get(xub, yub)));
-			sedDep += 4000 * (0.23 - Math.abs(Perlin.sedimentPockets.Get(xub, yub)));
+			double[] lerp = VoronoiAlgorithms.BarycentricCoordinates(xb, yb, meshTriangle);
+			for(int i = 0; i < meshTriangle.length; i++)
+			{
+				double elevCont = meshTriangle[i].GetElevation();
+				if(elevCont == Double.MAX_VALUE)
+					elevCont = 0;
+				elev += elevCont * lerp[i];
+			}
 		}
+		
+		double stepWidth = Perlin.sedimentStepDelta.Get(xub, yub);
+		double signum = Math.signum(stepWidth);
+		stepWidth = Math.abs(stepWidth);
+		stepWidth = Math.pow(stepWidth, 0.5);
+		stepWidth *= signum;
+		stepWidth += 0.8;
+		if(stepWidth < 0)
+			stepWidth = 0;
+		stepWidth *= 700;
+		stepWidth += 40;
+		
+		double sedDep = SedimentStairCalculation(elev, stepWidth, 0.65, 0.8, 3);
+		
+		double mask = Perlin.sedimentStepMask.Get(xub, yub);
+		if(mask > -0.17)
+			mask = (mask + 0.17) * 500;
+		else
+			mask = 0;
+		
+		//sedDep = Math.min(sedDep, mask);
 		
 		SamplePoint[] triangle = VoronoiAlgorithms.FindContainingSampleTriangle(xb, yb, vp);
 		if(triangle == null)
@@ -1546,31 +1614,16 @@ public class RegionalMap
 		}
 		if(elev < 0)
 			return 0;
-		return elev;
-		/*double rockJitter = Perlin.rockyJitters.Get(xub, yub);
-		if(rockJitter > 0.25)
-		{
-			rockJitter -= 0.25;
-			rockJitter *= Perlin.rockJitterScale;
-			rockJitter *= perlinContribs[1];
-			//elev += rockJitter;
-		}
-		else if(rockJitter < -0.25)
-		{
-			rockJitter += 0.25;
-			rockJitter *= -1;
-			rockJitter *= Perlin.rockJitterScale;
-			rockJitter *= perlinContribs[1];
-			//elev += rockJitter;
-		}*/
 		
-		/*LocalMap.WatermapValue isWater = IsWaterPoint(wX, wY);
+		LocalMap.WatermapValue isWater = IsWaterPoint(wX, wY);
 		if(isWater != LocalMap.WatermapValue.NotWater)
 			return elev;
 		double rockJitter = Perlin.rockyJitters.Get(xub, yub);
+		rockJitter *= perlinContribs[1];
+		rockJitter *= rockJitter;
 		if(elev + rockJitter * Perlin.rockJitterScale < 0)
 			return 0;
-		return elev + rockJitter * Perlin.rockJitterScale;*/
+		return elev + rockJitter * Perlin.rockJitterScale;
 	}
 	public double GetElevationLaplacian(double wX, double wY)
 	{
