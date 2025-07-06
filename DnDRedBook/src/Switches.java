@@ -12,7 +12,7 @@ public class Switches
 	public static boolean INITIAL_EXPAND_RENDERED = false;
 	public static boolean INITIAL_EXPAND_EMPTY = true;
 	public static boolean USE_BLURRING = true;
-	public static boolean CLEAR_IMAGE_CACHES = true;
+	public static boolean CLEAR_IMAGE_CACHES = false;
 	public static boolean PARALLEL_RENDERING = true;
 	public static boolean PARALLEL_CONTINENT_GEN = true;
 	

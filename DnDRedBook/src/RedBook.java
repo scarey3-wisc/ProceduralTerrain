@@ -1,5 +1,6 @@
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -23,6 +24,9 @@ public class RedBook
 	private InfoPanel info;
 	private ToolPanel tools;
 	private WorldMap myMap;
+	private Photographer photos;
+	private RenderLoop renderer;
+	private RenderPanel active;
 	public RedBook()
 	{
 		//Perlin.HackSaveSeeds();
@@ -37,8 +41,10 @@ public class RedBook
 		info = new InfoPanel();
 		JScrollPane infoScroll = new JScrollPane(info, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		myMap = new WorldMap("Nerean Sea");
+		photos = new Photographer(myMap);
 		tools = new ToolPanel(myMap);
 		myMap.setBackground(Color.white);
+		photos.setBackground(Color.white);
 		topPanel.add(myMap, BorderLayout.CENTER);
 		topPanel.add(infoScroll, BorderLayout.WEST);
 		topPanel.add(tools, BorderLayout.EAST);
@@ -60,7 +66,8 @@ public class RedBook
 		myMap.StartListeningToDrag();
 		myMap.StartListeningToZoom();
 		sleep(500);
-		myMap.InitiateRendering();
+		active = myMap;
+		InitiateRendering();
 		info.SetAllText();
 		Thread infoUpdater = new Thread(info);
 		infoUpdater.start();
@@ -163,6 +170,14 @@ public class RedBook
 		}
 		
 	}
+	public void InitiateRendering()
+	{
+		if(renderer != null)
+			return;
+		renderer = new RenderLoop();
+		Thread myRenderer = new Thread(renderer);
+		myRenderer.start();
+	}
 	public static void main(String[] args)
 	{
 		RedBook myBook = new RedBook();
@@ -179,6 +194,34 @@ public class RedBook
 			System.out.println("Done");
 		}));
 	}
+	private class RenderLoop implements Runnable
+	{
+		public boolean stop = false;
+		public boolean pause = false;
+		public long delayMS = 10;
+		@Override
+		public void run() {
+			while(!stop)
+			{
+				if(active != null)
+					active.Render();
+				try {
+					Thread.sleep(delayMS);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				while(pause)
+				{
+					try {
+						Thread.sleep(delayMS);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+		
+	}
 	public static void sleep(long millis)
 	{
 		try {
@@ -186,6 +229,10 @@ public class RedBook
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+	}
+	public interface RenderPanel
+	{
+		public void Render();
 	}
 	private class InfoPanel extends JPanel implements Runnable
 	{
@@ -200,6 +247,7 @@ public class RedBook
 		private JButton voronoiCenters;
 		
 		private JButton paintTerrainEval;
+		private JButton paintPhotographSwapper;
 		
 		private JButton paintCurrElev;
 		private JButton paintTerrainType;
@@ -290,6 +338,10 @@ public class RedBook
 			paintTerrainEval = new JButton("Paint Terrain");
 			paintTerrainEval.addActionListener(new SetPaintMode(Switches.PAINT_TYPE.TERRAIN_EVAL));
 			visualPaints.add(paintTerrainEval);
+			
+			paintPhotographSwapper = new JButton("Paint Photos");
+			paintPhotographSwapper.addActionListener(new SwapMapPhoto());
+			visualPaints.add(paintPhotographSwapper);
 			
 			//Frequent Paint Choices
 			usefulPaints = new JPanel(new GridLayout(0, 1));
@@ -409,6 +461,33 @@ public class RedBook
 					tile_renderings.caches[i].ResetAll();
 			}
 			
+		}
+		private class SwapMapPhoto implements ActionListener
+		{
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(active == myMap)
+				{
+					photos.PositionFromWorldMapView();
+					active = photos;
+					paintPhotographSwapper.setText("Paint Maps");
+					topPanel.remove(myMap);
+					topPanel.add(photos, BorderLayout.CENTER);
+					photos.requestFocus();
+					topPanel.updateUI();
+					photos.StartMoving();
+				}
+				else if(active == photos)
+				{
+					photos.StopMoving();
+					active = myMap;
+					topPanel.remove(photos);
+					topPanel.add(myMap, BorderLayout.CENTER);
+					paintPhotographSwapper.setText("Paint Photographs");
+					topPanel.updateUI();
+				}
+			}
 		}
 		private class SetPaintMode implements ActionListener
 		{

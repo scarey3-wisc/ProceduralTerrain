@@ -7,6 +7,12 @@ public class Vec3
 		this.y = y;
 		this.z = z;
 	}
+	public Vec3(Vec4 extract)
+	{
+		this.x = extract.x;
+		this.y = extract.y;
+		this.z = extract.z;
+	}
 	public Vec3 Clone()
 	{
 		return new Vec3(this.x, this.y, this.z);

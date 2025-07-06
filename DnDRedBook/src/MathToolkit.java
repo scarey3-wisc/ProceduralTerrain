@@ -1,6 +1,11 @@
 
 public class MathToolkit
 {
+	public static double SignedTriangleArea(double x1, double y1, double x2, double y2, double x3, double y3)
+	{
+		//Area = (1/2) [x1 (y2 – y3) + x2 (y3 – y1) + x3 (y1 – y2)]
+		return 0.5 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
+	}
 	public static boolean ExtractBitFromByte(byte t, int which)
 	{
 		if(which < 0 || which > 7)

@@ -28,13 +28,12 @@ import java.util.Scanner;
  * it may contain a fair number - but in any case a WorldMap
  * needs the ability to "Expand", tacking on more RegionalMaps
  */
-public class WorldMap extends DraggableJPanel
+public class WorldMap extends DraggableJPanel implements RedBook.RenderPanel
 {
 	private static final long serialVersionUID = 1L;
 	private int x0, y0; //which cell in regions counts as "0,0"? This may change as we expand!
 	private int w, h; //how many cells do we have?
 	private RegionalMap[][] regions;
-	private RenderLoop renderer;
 	private int tileSize;
 	private WorldMapTool activeTool;
 	private ZoomUpdater myZoom;
@@ -531,14 +530,6 @@ public class WorldMap extends DraggableJPanel
 		regions = newRegions;
 		SaveRegionGridInfo();
 	}
-	public void InitiateRendering()
-	{
-		if(renderer != null)
-			return;
-		renderer = new RenderLoop();
-		Thread myRenderer = new Thread(renderer);
-		myRenderer.start();
-	}
 	public void SaveSampleFiles(Collection<SamplePoint> points, 
 			boolean basicData, 
 			boolean adjacencies, 
@@ -707,6 +698,8 @@ public class WorldMap extends DraggableJPanel
 		g2.setTransform(saved);
 		RenderScale(g2);
 		Graphics g = getGraphics();
+		if(g == null)
+			return;
 		g.drawImage(buffer, 0, 0, null);
 	}
 	private void RenderScale(Graphics2D g2)
@@ -767,33 +760,7 @@ public class WorldMap extends DraggableJPanel
 					ZoomOut(e.getX(), e.getY());
 		}
 	}
-	private class RenderLoop implements Runnable
-	{
-		public boolean stop = false;
-		public boolean pause = false;
-		public long delayMS = 10;
-		@Override
-		public void run() {
-			while(!stop)
-			{
-				Render();
-				try {
-					Thread.sleep(delayMS);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				while(pause)
-				{
-					try {
-						Thread.sleep(delayMS);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
-			}
-		}
-		
-	}
+	
 	public static final int SCALE_LABEL_TARGET_WIDTH = 200;
 	public static final String[] TARGET_SCALE_LABLES = new String[]
 			{

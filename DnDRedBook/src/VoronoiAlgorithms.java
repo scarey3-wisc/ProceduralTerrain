@@ -225,7 +225,7 @@ public class VoronoiAlgorithms
 		MeshPoint a = vertices[0];
 		MeshPoint b = vertices[1];
 		MeshPoint c = vertices[2];
-		double abc = SignedTriangleArea(a.x, a.y, b.x, b.y, c.x, c.y);
+		double abc = MathToolkit.SignedTriangleArea(a.x, a.y, b.x, b.y, c.x, c.y);
 		double pbc = SignedTriangleAreaDY(x, y, b.x, b.y, c.x, c.y, 1);
 		double apc = SignedTriangleAreaDY(a.x, a.y, x, y, c.x, c.y, 2);
 		double abp = SignedTriangleAreaDY(a.x, a.y, b.x, b.y, x, y, 3);
@@ -252,7 +252,7 @@ public class VoronoiAlgorithms
 		MeshPoint a = vertices[0];
 		MeshPoint b = vertices[1];
 		MeshPoint c = vertices[2];
-		double abc = SignedTriangleArea(a.x, a.y, b.x, b.y, c.x, c.y);
+		double abc = MathToolkit.SignedTriangleArea(a.x, a.y, b.x, b.y, c.x, c.y);
 		double pbc = SignedTriangleAreaDX(x, y, b.x, b.y, c.x, c.y, 1);
 		double apc = SignedTriangleAreaDX(a.x, a.y, x, y, c.x, c.y, 2);
 		double abp = SignedTriangleAreaDX(a.x, a.y, b.x, b.y, x, y, 3);
@@ -279,20 +279,15 @@ public class VoronoiAlgorithms
 		MeshPoint a = vertices[0];
 		MeshPoint b = vertices[1];
 		MeshPoint c = vertices[2];
-		double abc = SignedTriangleArea(a.x, a.y, b.x, b.y, c.x, c.y);
-		double pbc = SignedTriangleArea(x, y, b.x, b.y, c.x, c.y);
-		double apc = SignedTriangleArea(a.x, a.y, x, y, c.x, c.y);
-		double abp = SignedTriangleArea(a.x, a.y, b.x, b.y, x, y);
+		double abc = MathToolkit.SignedTriangleArea(a.x, a.y, b.x, b.y, c.x, c.y);
+		double pbc = MathToolkit.SignedTriangleArea(x, y, b.x, b.y, c.x, c.y);
+		double apc = MathToolkit.SignedTriangleArea(a.x, a.y, x, y, c.x, c.y);
+		double abp = MathToolkit.SignedTriangleArea(a.x, a.y, b.x, b.y, x, y);
 		return new double[] {pbc / abc, apc / abc, abp / abc};
-	}
-	private static double SignedTriangleArea(double x1, double y1, double x2, double y2, double x3, double y3)
-	{
-		//Area = (1/2) [x1 (y2 – y3) + x2 (y3 – y1) + x3 (y1 – y2)]
-		return 0.5 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
 	}
 	public static double TriangleArea(MeshPoint a, MeshPoint b, MeshPoint c)
 	{
-		double signedArea = SignedTriangleArea(
+		double signedArea = MathToolkit.SignedTriangleArea(
 				a.x, a.y, 
 				b.x, b.y, 
 				c.x, c.y);
@@ -302,7 +297,7 @@ public class VoronoiAlgorithms
 	{
 		if(vertices.length != 3)
 			return -1;
-		double signedArea = SignedTriangleArea(
+		double signedArea = MathToolkit.SignedTriangleArea(
 				vertices[0].x, vertices[0].y, 
 				vertices[1].x, vertices[1].y, 
 				vertices[2].x, vertices[2].y);
