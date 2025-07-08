@@ -15,6 +15,7 @@ public class Switches
 	public static boolean CLEAR_IMAGE_CACHES = false;
 	public static boolean PARALLEL_RENDERING = true;
 	public static boolean PARALLEL_CONTINENT_GEN = true;
+	public static boolean PHOTOGRAPH_PARALLEL_TILED_RENDER = false;
 	
 	public static int MAX_SAMPLE_POINTS_IN_LAKE = 8000;
 	public static int MIN_LOCAL_MAP_PIXELS_IN_LAKE = 400;

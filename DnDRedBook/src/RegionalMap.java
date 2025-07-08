@@ -1158,6 +1158,7 @@ public class RegionalMap
 	}
 	public void RunFullPhasedErosion()
 	{
+		
 		ArrayList<LocalMap> targets = new ArrayList<LocalMap>();
 		for(int i = 0; i < DIMENSION; i++)
 		{
@@ -1173,11 +1174,30 @@ public class RegionalMap
 		HashMap<LocalMap, Boolean> usedForPixels = new HashMap<LocalMap, Boolean>();
     	ArrayList<LocalMap.Pixel> allPixels = 
     			LocalTerrainAlgorithms.BeginPixelOperation(usedForPixels, targets, true, true, true, true, true);
-		
-		System.out.println("********");
-		System.out.println("THERMAL 1");
-		System.out.println("********\n");
-		LocalTerrainAlgorithms.ThermalErosion(allPixels);
+    	
+		for(int n = 0; n < 20; n++)
+		{
+			System.out.println("********");
+			System.out.println("LAPLACE IT " + n);
+			System.out.println("********\n");
+			for(int i = 0; i < 2; i++)
+			{
+				for(int j = 0; j < 2; j++)
+				{
+					final int innerI = i;
+					final int innerJ = j;
+					int blockSize = DIMENSION / 2;
+					IntStream.range(0, blockSize * blockSize).parallel().forEach(index ->{
+						int myI = index / blockSize;
+						int myJ = index % blockSize;
+						int realI = innerI + myI * 2;
+						int realJ = innerJ + myJ * 2;
+						LocalMap target = topography[realI * DIMENSION + realJ];
+						target.LaplacianErosionIteration(1);
+					});
+				}
+			}
+		}
 		
 		for(int i = 0; i < 4; i++)
 		{
@@ -1208,15 +1228,11 @@ public class RegionalMap
 			}
 		}
 		
-		System.out.println("********");
-		System.out.println("HYDROLOGY 1");
-		System.out.println("********\n");
-		LocalTerrainAlgorithms.GuaranteeConsistentHydrology(allPixels);
 		
 		System.out.println("********");
-		System.out.println("THERMAL 2");
+		System.out.println("FLUVIAL THERMAL 1");
 		System.out.println("********\n");
-		LocalTerrainAlgorithms.ThermalErosion(allPixels);
+		LocalTerrainAlgorithms.ThermalFluvialErosion(allPixels, 10);
 		
 		for(int i = 0; i < 4; i++)
 		{
@@ -1225,70 +1241,7 @@ public class RegionalMap
 				final int innerI = i;
 				final int innerJ = j;
 				System.out.println("********");
-				System.out.println("RAIN 2 BLOCK " + i + ", " + j);
-				System.out.println("********\n");
-				int blockSize = DIMENSION / 4;
-				IntStream.range(0, blockSize * blockSize).parallel().forEach(index ->{
-					int myI = index / blockSize;
-					int myJ = index % blockSize;
-					int realI = innerI + myI * 4;
-					int realJ = innerJ + myJ * 4;
-					LocalMap target = topography[realI * DIMENSION + realJ];
-					for(int drop = 0; drop < 5000; drop++)
-					{
-						WaterDroplet nova = new WaterDroplet(target, 1, used, false);
-						boolean okay = true;
-						while(okay)
-						{
-							okay = nova.OneErosionStep();
-						}
-					}
-				});
-			}
-		}
-		
-		System.out.println("********");
-		System.out.println("HYDROLOGY 2");
-		System.out.println("********\n");
-		LocalTerrainAlgorithms.GuaranteeConsistentHydrology(allPixels);
-		
-		System.out.println("********");
-		System.out.println("THERMAL 3");
-		System.out.println("********\n");
-		LocalTerrainAlgorithms.ThermalErosion(allPixels);
-		
-		for(int n = 0; n < 20; n++)
-		{
-			System.out.println("********");
-			System.out.println("LAPLACE IT " + n);
-			System.out.println("********\n");
-			for(int i = 0; i < 2; i++)
-			{
-				for(int j = 0; j < 2; j++)
-				{
-					final int innerI = i;
-					final int innerJ = j;
-					int blockSize = DIMENSION / 2;
-					IntStream.range(0, blockSize * blockSize).parallel().forEach(index ->{
-						int myI = index / blockSize;
-						int myJ = index % blockSize;
-						int realI = innerI + myI * 2;
-						int realJ = innerJ + myJ * 2;
-						LocalMap target = topography[realI * DIMENSION + realJ];
-						target.LaplacianErosionIteration(1);
-					});
-				}
-			}
-		}
-
-		for(int i = 0; i < 4; i++)
-		{
-			for(int j = 0; j < 4; j++)
-			{
-				final int innerI = i;
-				final int innerJ = j;
-				System.out.println("********");
-				System.out.println("RAIN 3 BLOCK " + i + ", " + j);
+				System.out.println("RAIN 1 BLOCK " + i + ", " + j);
 				System.out.println("********\n");
 				int blockSize = DIMENSION / 4;
 				IntStream.range(0, blockSize * blockSize).parallel().forEach(index ->{
@@ -1311,11 +1264,9 @@ public class RegionalMap
 		}
 		
 		System.out.println("********");
-		System.out.println("RAIN FLOW");
+		System.out.println("FINAL HYDROLOGY");
 		System.out.println("********\n");
-		for(LocalMap t : targets)
-			t.SendEvenRain();
-		LocalTerrainAlgorithms.SendRainDownhill(allPixels);
+		LocalTerrainAlgorithms.GuaranteeConsistentHydrology(allPixels);
 		
 		LocalTerrainAlgorithms.EndPixelOperation(usedForPixels, true, true, true, true, true);
 		

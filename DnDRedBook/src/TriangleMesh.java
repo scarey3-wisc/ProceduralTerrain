@@ -1,178 +1,125 @@
-import java.awt.Color;
 import java.util.ArrayList;
 
-public class TriangleMesh
+public abstract class TriangleMesh
 {
 	private ArrayList<Vec4> points;
-	private ArrayList<Color> colors;
-	private ArrayList<Vec4> normals;
-	private ArrayList<Vec4> transformedNormals;
-	public ArrayList<Triangle> tris;
 	private ArrayList<Vec4> transformedPoints;
+	private ArrayList<Double> zDepths;
+	private int numPoints;
 	
-	public TriangleMesh(LocalMap source)
+	public TriangleMesh()
 	{
 		points = new ArrayList<Vec4>();
-		normals = new ArrayList<Vec4>();
 		transformedPoints = new ArrayList<Vec4>();
-		transformedNormals = new ArrayList<Vec4>();
-		colors = new ArrayList<Color>();
-		tris = new ArrayList<Triangle>();
-		source.PrepareForEditing(true, true, true);
-		int dim = DataImage.trueDim;
-		double mpp = 1.0 * LocalMap.METER_DIM / DataImage.trueDim; //meters per pixel
-		for(int i = 0; i <= dim; i++)
-		{
-			for(int j = 0; j <= dim; j++)
-			{
-				LocalMap.Pixel p = source.new Pixel(i, j);
-				double height = p.GetHeight();
-				double x = 1.0 * i * mpp;
-				double y = 1.0 * j * mpp;
-				
-				points.add(new Vec4(x, y, height, 1));
-				transformedPoints.add(new Vec4(0, 0, 0, 0));
-				Vec2 gradient = p.GetHeightGradient();
-				gradient.Divide(LocalMap.METER_DIM);
-				
-				normals.add(new Vec4(-gradient.x, -gradient.y, 1, 0));
-				transformedNormals.add(new Vec4(0, 0, 0, 0));
-				
-				Color finalColor = null;
-				
-				int lakeColor = (18 << 16) + (146 << 8) + (201);
-				int peakColor = (171 << 16) + (156 << 8) + (135);
-				int mounColor = (148 << 16) + (126 << 8) + (40);
-				int hillColor = (156 << 16) + (158 << 8) + (93);
-				int flatColor = (124 << 16) + (166 << 8) + (88);
-				
-				LocalMap.WatermapValue water = p.GetWaterType();
-								
-				if(water == LocalMap.WatermapValue.Ocean)
-					finalColor = new Color(0, 0, 255);
-				else if(water == LocalMap.WatermapValue.Lake)
-					finalColor = new Color(lakeColor);
-				else
-				{
-					int rainflow = p.GetCurrentRainflow();
-					
-					int base = 255 << 16;
-					if(gradient.Len() > 0.5)
-						base = peakColor;
-					else if(gradient.Len() > 0.3)
-						base = MathToolkit.SmoothColorLerp(mounColor, peakColor, (gradient.Len() - 0.3) / (0.5 - 0.3));
-					else if(gradient.Len() > 0.17)
-						base = MathToolkit.SmoothColorLerp(hillColor, mounColor, (gradient.Len() - 0.17) / (0.3 - 0.17));
-					else if(gradient.Len() > 0.03)
-						base = MathToolkit.SmoothColorLerp(flatColor, hillColor, (gradient.Len() - 0.03) / (0.17 - 0.03));
-					else
-						base = flatColor;
-					
-					if(rainflow > 500)
-					{
-						double percent = Math.sqrt(rainflow - 500) / 120;
-						if(percent > 1)
-							percent = 1;
-						if(percent < 0)
-							percent = 0;
-						base = MathToolkit.SmoothColorLerp(base, lakeColor, percent);
-					}
-					finalColor = new Color(base);
-				}
-				colors.add(finalColor);
-			}
-		}
-		for(int i = 0; i < dim; i++)
-		{
-			for(int j = 0; j < dim; j++)
-			{
-				int p00 = (i) * (dim + 1) + (j);
-				int p01 = (i) * (dim + 1) + (j + 1);
-				int p10 = (i + 1) * (dim + 1) + (j);
-				int p11 = (i + 1) * (dim + 1) + (j + 1);
-				//LocalMap.Pixel loc00 = source.new Pixel(i, j);
-				//LocalMap.Pixel loc01 = source.new Pixel(i, j + 1);
-				//LocalMap.Pixel loc10 = source.new Pixel(i + 1, j);
-				//LocalMap.Pixel loc11 = source.new Pixel(i + 1, j + 1);
-				
-				Triangle one = new Triangle(p00, p01, p10);
-				Triangle two = new Triangle(p11, p10, p01);
-				tris.add(one);
-				tris.add(two);
-			}
-		}
-		source.CompleteEditing(true, true, true, false);
+		zDepths = new ArrayList<Double>();
 	}
-	
+	public int GetNumPoints()
+	{
+		return numPoints;
+	}
+	public Mat4 GetModelTransform()
+	{
+		return Mat4.IdentityMatrix();
+	}
 	public void TransformToClipSpace(Mat4 view, Mat4 projection)
 	{
-		for(int i = 0; i < points.size(); i++)
+		Mat4 model = GetModelTransform();
+		for(int i = 0; i < numPoints; i++)
 		{
 			Vec4 dest = transformedPoints.get(i);
 			Vec4 src = points.get(i);
-			view.postMultiply(src, dest);
+			model.postMultiply(src, dest);
+			view.postMultiply(dest, dest);
+			double zDepth = -dest.z;
+			zDepths.set(i, zDepth);
 			projection.postMultiply(dest, dest);
 			dest.x /= dest.k;
 			dest.y /= dest.k;
 			dest.z /= dest.k;
-			
-			Vec4 normDest = transformedNormals.get(i);
-			Vec4 normSec = normals.get(i);
-			view.postMultiply(normSec, normDest);
-			normDest.Normalize();
 		}
 	}
-	
-	public class Triangle
+	public void RegisterPoint(Vec4 loc)
+	{
+		points.add(loc);
+		transformedPoints.add(loc.Clone());
+		zDepths.add(0.0);
+		numPoints++;
+	}
+	public abstract boolean ReadyToRender();
+	public abstract void FillTriangles(ArrayList<Triangle> activeTris, int width, int height);
+	public abstract class Triangle
 	{
 		//indices
 		private int p0;
 		private int p1;
 		private int p2;
+
+		//bounding box, view coordinates
+		private double xS, xE, yS, yE;
 		
-		//bounding box
-		public double xS, xE, yS, yE;
-		
+		//screen coordinates
+		private double x0, x1, x2, y0, y1, y2;
+		private int xL, xR, yU, yD;
+
 		public Triangle(int p0, int p1, int p2)
 		{
 			this.p0 = p0;
 			this.p1 = p1;
 			this.p2 = p2;
 		}
-		public void InterpolateNormal(double a, double b, double c, Vec3 dest)
+		public abstract int Render(double a, double b, double c);
+		
+		public int GetLeftBounds()
 		{
-			Vec4 aNorm = transformedNormals.get(p0);
-			Vec4 bNorm = transformedNormals.get(p1);
-			Vec4 cNorm = transformedNormals.get(p2);
-			
-			dest.x = aNorm.x * a + bNorm.x * b + cNorm.x * c;
-			dest.y = aNorm.y * a + bNorm.y * b + cNorm.y * c;
-			dest.z = aNorm.z * a + bNorm.z * b + cNorm.z * c;
-			
-			dest.Normalize();
+			return xL;
 		}
-		public int InterpolateColor(double a, double b, double c)
+		public int GetRightBounds()
 		{
-			int reda = colors.get(p0).getRed();
-			int redb = colors.get(p1).getRed();
-			int redc = colors.get(p2).getRed();
-			
-			int greena = colors.get(p0).getGreen();
-			int greenb = colors.get(p1).getGreen();
-			int greenc = colors.get(p2).getGreen();
-			
-			int bluea = colors.get(p0).getBlue();
-			int blueb = colors.get(p1).getBlue();
-			int bluec = colors.get(p2).getBlue();
-			
-			double red = a * reda + b * redb + c * redc;
-			double green = a * greena + b * greenb + c * greenc;
-			double blue = a * bluea + b * blueb + c * bluec;
-			
-			int re = (int) red;
-			int gr = (int) green;
-			int bl = (int) blue;
-			return (re << 16) + (gr << 8) + bl;
+			return xR;
+		}
+		public int GetUpBounds()
+		{
+			return yU;
+		}
+		public int GetDownBounds()
+		{
+			return yD;
+		}
+		public double GetX0()
+		{
+			return x0;
+		}
+		public double GetX1()
+		{
+			return x1;
+		}
+		public double GetX2()
+		{
+			return x2;
+		}
+		public double GetY0()
+		{
+			return y0;
+		}
+		public double GetY1()
+		{
+			return y1;
+		}
+		public double GetY2()
+		{
+			return y2;
+		}
+		public double GetD0()
+		{
+			return zDepths.get(p0);
+		}
+		public double GetD1()
+		{
+			return zDepths.get(p1);
+		}
+		public double GetD2()
+		{
+			return zDepths.get(p2);
 		}
 		public Vec4 GetP0()
 		{
@@ -186,7 +133,36 @@ public class TriangleMesh
 		{
 			return transformedPoints.get(p2);
 		}
-		
+		public int GetI0()
+		{
+			return p0;
+		}
+		public int GetI1()
+		{
+			return p1;
+		}
+		public int GetI2()
+		{
+			return p2;
+		}
+		public void CalculateScreenCoordinates(int screenWidth, int screenHeight)
+		{
+			xL = (int) (xS * screenWidth / 2 + screenWidth / 2);
+			xR = (int) (xE * screenWidth / 2 + screenWidth / 2);
+			
+			//this seems flipped here; it's flipped because we're going from coordinates
+			//where positive is upwards (view) to coordinates where positive is lower (screen)
+			yD = (int) (screenHeight / 2 - yS * screenHeight / 2);
+			yU = (int) (screenHeight / 2 - yE * screenHeight / 2);
+			
+			x0 = (GetP0().x * screenWidth / 2 + screenWidth / 2);
+			x1 = (GetP1().x * screenWidth / 2 + screenWidth / 2);
+			x2 = (GetP2().x * screenWidth / 2 + screenWidth / 2);
+			
+			y0 = (screenHeight / 2 - GetP0().y * screenHeight / 2);
+			y1 = (screenHeight / 2 - GetP1().y * screenHeight / 2);
+			y2 = (screenHeight / 2 - GetP2().y * screenHeight / 2);
+		}
 		public void CalculateBoundingBox()
 		{
 			xS = Integer.MAX_VALUE;

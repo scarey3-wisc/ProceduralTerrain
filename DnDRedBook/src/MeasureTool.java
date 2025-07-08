@@ -161,7 +161,7 @@ public class MeasureTool extends WorldMapTool
 			else if(keysDown.contains(KeyEvent.VK_T))
 			{
 				
-				RegionalMap.Coordinate region = map.GetRegionalMapAt(e.getX(), e.getY());
+				/*RegionalMap.Coordinate region = map.GetRegionalMapAt(e.getX(), e.getY());
 				if(region == null)
 					return;
 				LocalMap.Coordinate local = region.GetRegionalMap().GetLocalMapAt(region.x, region.y);
@@ -177,13 +177,13 @@ public class MeasureTool extends WorldMapTool
 					t.SendEvenRain();
 				LocalTerrainAlgorithms.GuaranteeConsistentHydrology(targets, true);
 				LocalTerrainAlgorithms.ThermalErosion(targets, true);
-				LocalTerrainAlgorithms.SendRainDownhill(targets, true);
+				LocalTerrainAlgorithms.SendRainDownhill(targets, true);*/
 				
 				
-				/*RegionalMap.Coordinate region = map.GetRegionalMapAt(e.getX(), e.getY());
+				RegionalMap.Coordinate region = map.GetRegionalMapAt(e.getX(), e.getY());
 				if(region == null)
 					return;
-				region.GetRegionalMap().RunFullPhasedErosion();*/
+				region.GetRegionalMap().RunFullPhasedErosion();
 			}
 		}
 		

@@ -666,7 +666,7 @@ public class WorldMap extends DraggableJPanel implements RedBook.RenderPanel
 		dX = newDX;
 		dY = newDY;
 	}
-	public synchronized void Render()
+	public synchronized long Render()
 	{
 		BufferedImage buffer = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g2 = buffer.createGraphics();
@@ -699,8 +699,9 @@ public class WorldMap extends DraggableJPanel implements RedBook.RenderPanel
 		RenderScale(g2);
 		Graphics g = getGraphics();
 		if(g == null)
-			return;
+			return 10l;
 		g.drawImage(buffer, 0, 0, null);
+		return 10l;
 	}
 	private void RenderScale(Graphics2D g2)
 	{

@@ -97,8 +97,8 @@ public class LocalMap implements RenderQueue.RenderRequester
 		}
 		else
 		{
-			for(int i = 0; i < dimension; i++)
-				for(int j = 0; j < dimension; j++)
+			for(int j = 0; j < dimension; j++)
+				for(int i = 0; i < dimension; i++)
 				{
 					double localX = i;
 					double localY = j;

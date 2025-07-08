@@ -8,6 +8,8 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -198,13 +200,13 @@ public class RedBook
 	{
 		public boolean stop = false;
 		public boolean pause = false;
-		public long delayMS = 10;
 		@Override
 		public void run() {
 			while(!stop)
 			{
+				long delayMS = 10;
 				if(active != null)
-					active.Render();
+					delayMS = active.Render();
 				try {
 					Thread.sleep(delayMS);
 				} catch (InterruptedException e) {
@@ -212,6 +214,7 @@ public class RedBook
 				}
 				while(pause)
 				{
+					delayMS = 50;
 					try {
 						Thread.sleep(delayMS);
 					} catch (InterruptedException e) {
@@ -232,7 +235,7 @@ public class RedBook
 	}
 	public interface RenderPanel
 	{
-		public void Render();
+		public long Render();
 	}
 	private class InfoPanel extends JPanel implements Runnable
 	{
@@ -533,6 +536,8 @@ public class RedBook
 	public static DataImageByte.DataImageManager watermaps = new DataImageByte.DataImageManager(new int[] {50000, 10000, 4000, 1000, 500});
 	public static DataImageInt.DataImageManager rainflowmaps = new DataImageInt.DataImageManager(new int[] {50000, 10000, 4000, 1000, 500});
 	public static DataImage32Decimal.DataImageManager sedimentmaps = new DataImage32Decimal.DataImageManager(new int[] {50000, 10000, 4000, 1000, 500});
-
+	public static ExecutorService loadingThreadPool = Executors.newFixedThreadPool(3);
+	public static ExecutorService simulationThreadPool = Executors.newFixedThreadPool(3);
+	public static ExecutorService renderingThreadPool = Executors.newFixedThreadPool(4);
 
 }

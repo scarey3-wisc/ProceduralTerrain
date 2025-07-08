@@ -13,11 +13,28 @@ public class Mat4
 	{
 		vals[4 * row + col] = val;
 	}
+	public static Mat4 ShiftMatrix(double dx, double dy, double dz)
+	{
+		Mat4 nova = IdentityMatrix();
+		nova.set(3, 0, dx);
+		nova.set(3, 1, dy);
+		nova.set(3, 2, dz);
+		return nova;
+	}
+	public static Mat4 IdentityMatrix()
+	{
+		Mat4 nova = new Mat4();
+		nova.set(0, 0, 1);
+		nova.set(1, 1, 1);
+		nova.set(2, 2, 1);
+		nova.set(3, 3, 1);
+		return nova;
+	}
 	public static Mat4 ProjectionMatrix(double fovDegrees, double aspectRatio, double nearPlaneDistance, double farPlaneDistance)
 	{
 		double f = 1 / Math.tan(Math.toRadians(fovDegrees) / 2);
 		Mat4 nova = new Mat4();
-		nova.set(0, 0, f / aspectRatio);
+		nova.set(0, 0, -f / aspectRatio);
 		nova.set(1, 1, f);
 		nova.set(2, 2, (farPlaneDistance + nearPlaneDistance) / (nearPlaneDistance - farPlaneDistance));
 		nova.set(2, 3, (2 * farPlaneDistance * nearPlaneDistance) / (nearPlaneDistance - farPlaneDistance));
